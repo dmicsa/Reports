@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mutual Funds Performance</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 40px; background-color: #f8fafc; color: #1e293b; }
+        h1 { color: #0f172a; margin-bottom: 20px; }
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #f1f5f9; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s; white-space: nowrap; }
+        th:hover { background-color: #e2e8f0; }
+        th::after { content: '\21D5'; margin-left: 8px; font-size: 0.8em; color: #94a3b8; }
+        th.asc::after { content: '\2191'; color: #3b82f6; }
+        th.desc::after { content: '\2193'; color: #3b82f6; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: #f8fafc; }
+        .numeric { font-family: 'JetBrains Mono', Consolas, monospace; text-align: right; }
+        th.numeric { text-align: right; }
+        .good-val { color: #16a34a; font-weight: 500; }
+        .rating-5 { color: #16a34a; font-weight: 600; }
+        .rating-4 { color: #2563eb; font-weight: 600; }
+        .rating-3 { color: #ca8a04; font-weight: 600; }
+        .rating-2 { color: #ea580c; font-weight: 600; }
+        .rating-1 { color: #dc2626; font-weight: 600; }
+        .footer { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .pill { border: 1px solid #e2e8f0; background: rgba(241,245,249,0.8); border-radius: 999px;
+                padding: 7px 13px; font-size: 0.82em; color: #64748b; white-space: nowrap; }
+        .pill strong { color: #334155; }
+    </style>
+</head>
+<body>
+
+    <h1>10-Year Mutual Fund Performance</h1>
+    <div class="table-container">
+        <table id="fundsTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0, 'string')">Ticker</th>
+                    <th onclick="sortTable(1, 'string')">Fund Name</th>
+                    <th class="numeric" onclick="sortTable(2, 'percent')">10Y AR</th>
+                    <th class="numeric" onclick="sortTable(3, 'number')">10Y SR</th>
+                    <th class="numeric" onclick="sortTable(4, 'number')">Rating</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>SSSYX</td><td>State Street Equity 500 Index K</td><td class="numeric good-val">15.46%</td><td class="numeric">0.85</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>FSPSX</td><td>Fidelity International Index</td><td class="numeric">9.02%</td><td class="numeric">0.55</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>SSFEX</td><td>State Street Aggregate Bond Index K</td><td class="numeric">2.54%</td><td class="numeric">0.49</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>FSMDX</td><td>FIDELITY MID CAP INDEX</td><td class="numeric">11.94%</td><td class="numeric">0.62</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>DFSTX</td><td>DFA US Small Cap I</td><td class="numeric">12.74%</td><td class="numeric">0.57</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>DFREX</td><td>DFA Real Estate Securities I</td><td class="numeric">5.93%</td><td class="numeric">0.29</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>AVUVX</td><td>Avantis U.S. Small Cap Value Instl</td><td class="numeric good-val">18.79%</td><td class="numeric">0.64</td><td class="numeric" title="★★★★★">5</td></tr>
+                <tr><td>BKGPX</td><td>BlackRock 60/40 Target Allocation K</td><td class="numeric">11.22%</td><td class="numeric">0.96</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>DSCGX</td><td>DFA US Small Cap Growth Instl</td><td class="numeric">12.22%</td><td class="numeric">0.55</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>FIMVX</td><td>Fidelity Mid Cap Value Index</td><td class="numeric">11.21%</td><td class="numeric">0.51</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>FIPDX</td><td>Fidelity Inflation-Protected Bond Index Fund</td><td class="numeric">3.33%</td><td class="numeric">0.61</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>FMDGX</td><td>FIDELITY MID CAP GROWTH INDEX</td><td class="numeric">10.60%</td><td class="numeric">0.43</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>GOIXX</td><td>Federated Hermes Govt Obl IS</td><td class="numeric">0.00%</td><td class="numeric">0.00</td><td class="numeric">-</td></tr>
+                <tr><td>HFARX</td><td>Janus Henderson Developed World Bond N</td><td class="numeric">2.42%</td><td class="numeric">0.51</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>MGRDX</td><td>MFS International Growth R6</td><td class="numeric">12.19%</td><td class="numeric">0.78</td><td class="numeric" title="★★★★★">5</td></tr>
+                <tr><td>MIGNX</td><td>MFS Massachusetts Inv Gr Stk R6</td><td class="numeric good-val">21.76%</td><td class="numeric good-val">1.11</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>PEQSX</td><td>Putnam Large Cap Value R6</td><td class="numeric good-val">18.25%</td><td class="numeric good-val">1.03</td><td class="numeric" title="★★★★★">5</td></tr>
+                <tr><td>PIMIX</td><td>PIMCO Income Fund</td><td class="numeric">4.83%</td><td class="numeric good-val">1.15</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>PTRQX</td><td>PGIM Total Return Bond R6</td><td class="numeric">3.15%</td><td class="numeric">0.59</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>RGNGX</td><td>American Funds Growth and Inc Port R6</td><td class="numeric">13.76%</td><td class="numeric good-val">1.02</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>RINGX</td><td>American Funds Cnsrv Gr & Inc R-6</td><td class="numeric">8.73%</td><td class="numeric good-val">1.03</td><td class="numeric" title="★★★★★">5</td></tr>
+                <tr><td>RNWGX</td><td>American Funds New World R6</td><td class="numeric">12.12%</td><td class="numeric">0.74</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>SSBSX</td><td>State Street Target Retirement 2025 K</td><td class="numeric">10.74%</td><td class="numeric">0.99</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>SSBYX</td><td>State Street Target Retirement 2030 K</td><td class="numeric">11.71%</td><td class="numeric">0.96</td><td class="numeric" title="★★★★★">5</td></tr>
+                <tr><td>SSCKX</td><td>State Street Target Retirement 2035 K</td><td class="numeric">12.17%</td><td class="numeric">0.93</td><td class="numeric" title="★★★★☆">4</td></tr>
+                <tr><td>SSCQX</td><td>State Street Target Retirement 2040 K</td><td class="numeric">12.75%</td><td class="numeric">0.91</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>SSDEX</td><td>State Street Target Retirement 2045 K</td><td class="numeric">12.97%</td><td class="numeric">0.88</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>SSDLX</td><td>State Street Target Retirement 2050 K</td><td class="numeric">13.19%</td><td class="numeric">0.87</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>SSDQX</td><td>State Street Target Retirement 2055 K</td><td class="numeric">12.82%</td><td class="numeric">0.84</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>SSDYX</td><td>State Street Target Retirement 2060 K</td><td class="numeric">12.46%</td><td class="numeric">0.84</td><td class="numeric" title="★★★☆☆">3</td></tr>
+                <tr><td>SSFKX</td><td>State Street Target Retirement 2065 K</td><td class="numeric">15.13%</td><td class="numeric good-val">1.03</td><td class="numeric" title="★★☆☆☆">2</td></tr>
+                <tr><td>SSFOX</td><td>State Street Target Retirement K</td><td class="numeric">7.27%</td><td class="numeric">0.97</td><td class="numeric" title="★★★★☆">4</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let sortCol = -1;
+        let sortAsc = true;
+
+        function sortTable(colIdx, type) {
+            const table = document.getElementById("fundsTable");
+            const tbody = table.tBodies[0];
+            const rows = Array.from(tbody.rows);
+            const headers = table.querySelectorAll("th");
+
+            if (sortCol === colIdx) {
+                sortAsc = !sortAsc;
+            } else {
+                sortCol = colIdx;
+                sortAsc = false;
+                if (type === 'string') sortAsc = true;
+            }
+
+            headers.forEach(h => { h.classList.remove("asc", "desc"); });
+            if (sortAsc) headers[colIdx].classList.add("asc");
+            else headers[colIdx].classList.add("desc");
+
+            rows.sort((a, b) => {
+                let valA = a.cells[colIdx].innerText.trim();
+                let valB = b.cells[colIdx].innerText.trim();
+
+                if (type === 'number') {
+                    valA = parseFloat(valA) || 0;
+                    valB = parseFloat(valB) || 0;
+                } else if (type === 'percent') {
+                    valA = parseFloat(valA.replace('%', '')) || 0;
+                    valB = parseFloat(valB.replace('%', '')) || 0;
+                }
+
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        sortTable(3, 'number');
+
+        function colorRatings() {
+            const tbody = document.getElementById("fundsTable").tBodies[0];
+            Array.from(tbody.rows).forEach(row => {
+                const ratingCell = row.cells[4];
+                if (ratingCell) {
+                    const rating = parseInt(ratingCell.innerText, 10);
+                    if (!isNaN(rating)) {
+                        ratingCell.classList.add('rating-' + rating);
+                    }
+                }
+            });
+        }
+        colorRatings();
+    </script>
+    <div class="footer">
+        <span class="pill"><strong>Prepared for</strong> Dan Micsa, PhD</span>
+        <span class="pill"><strong>Processed by</strong> Claude Sonnet</span>
+        <span class="pill"><strong>Generated</strong> April 2, 2026</span>
+        <span class="pill"><strong>Ratings</strong> Morningstar Overall via yfinance</span>
+    </div>
+</body>
+</html>

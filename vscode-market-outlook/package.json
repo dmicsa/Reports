@@ -1,0 +1,45 @@
+{
+  "name": "market-outlook-automation",
+  "displayName": "Market Outlook Automation",
+  "description": "Regenerates the MarketOutlook report from VS Code using Copilot-authenticated language models.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.101.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "marketOutlook.updateViaCopilot",
+        "title": "Market Outlook: Update via Copilot"
+      }
+    ],
+    "configuration": {
+      "title": "Market Outlook Automation",
+      "properties": {
+        "marketOutlook.reportPath": {
+          "type": "string",
+          "default": "MarketOutlook.html",
+          "description": "Path to the report HTML file, relative to the workspace folder unless absolute."
+        },
+        "marketOutlook.autoRunOnStartup": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically refresh the market outlook when VS Code starts and this workspace is open."
+        },
+        "marketOutlook.exitAfterAutomation": {
+          "type": "boolean",
+          "default": false,
+          "description": "Quit VS Code after an automated refresh finishes. Intended for scheduled runs."
+        }
+      }
+    }
+  }
+}

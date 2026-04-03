@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OECD GDP per Capita (PPP) — 25-Year Evolution</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f1117;
+    --surface: #181b24;
+    --border:  #2a2e3a;
+    --fg:      #e4e6ed;
+    --fg-dim:  #8b90a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg); color: var(--fg);
+    min-height: 100vh; padding: 2rem;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    color: #FDF6E3; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
+  }
+
+  .controls {
+    display: flex; gap: .5rem; margin-bottom: 1rem;
+    flex-wrap: wrap; align-items: center;
+  }
+  .controls label {
+    font-size: .72rem; font-weight: 600; color: var(--fg-dim);
+    text-transform: uppercase; letter-spacing: .04em; margin-right: .3rem;
+  }
+  .controls button {
+    font-family: 'Inter', sans-serif;
+    font-size: .68rem; font-weight: 600;
+    padding: .35rem .65rem; border-radius: 5px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--fg-dim); cursor: pointer;
+    transition: all 0.12s;
+  }
+  .controls button:hover { color: var(--fg); border-color: var(--fg-dim); }
+  .controls button.active {
+    color: var(--fg); border-color: oklch(0.55 0.18 143);
+    background: oklch(0.55 0.18 143 / 0.12);
+  }
+
+  .toggle-wrap {
+    display: flex; align-items: center; gap: .4rem;
+    margin-left: auto; font-size: .72rem; color: var(--fg-dim);
+    font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .toggle { position: relative; width: 34px; height: 18px; cursor: pointer; }
+  .toggle input { display: none; }
+  .toggle-slider {
+    position: absolute; inset: 0; border-radius: 12px;
+    background: var(--border); transition: background 0.2s;
+  }
+  .toggle-slider::after {
+    content: ''; position: absolute; width: 14px; height: 14px;
+    left: 2px; top: 2px; border-radius: 50%; background: var(--fg-dim);
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle input:checked + .toggle-slider {
+    background: oklch(0.5 0.18 143);
+  }
+  .toggle input:checked + .toggle-slider::after {
+    transform: translateX(16px); background: var(--fg);
+  }
+
+  /* Growth Table */
+  .table-wrap { overflow-x: auto; margin-top: 1rem; }
+  table.growth-tbl {
+    width: 100%; border-collapse: collapse;
+    font-size: .75rem; white-space: nowrap;
+  }
+  table.growth-tbl th, table.growth-tbl td {
+    padding: .4rem .6rem; text-align: right;
+  }
+  table.growth-tbl th {
+    background: #1e2230; position: sticky; top: 0;
+    color: var(--fg-dim); font-weight: 700;
+    border-bottom: 1px solid var(--border); cursor: pointer;
+    user-select: none;
+  }
+  table.growth-tbl th:hover { color: var(--fg); }
+  table.growth-tbl th:first-child, table.growth-tbl td:first-child {
+    text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1;
+  }
+  table.growth-tbl th:first-child { background: #1e2230; z-index: 2; }
+  table.growth-tbl tr:nth-child(even) td:first-child { background: #1a1d28; }
+
+  .chart-container { width: 100%; overflow-x: auto; }
+  svg text { font-family: 'Inter', sans-serif; }
+  svg .line { fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+    transition: opacity 0.2s, stroke-width 0.2s; }
+  svg .line.dimmed { opacity: 0.08; stroke-width: 1; }
+  svg .line.highlighted { opacity: 1; stroke-width: 3.5; }
+  svg .hit-area { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
+
+  .legend-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: .25rem .5rem; margin-top: 1rem;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: .35rem;
+    font-size: .7rem; color: var(--fg-dim); cursor: pointer;
+    padding: .15rem .3rem; border-radius: 4px;
+    transition: background 0.12s;
+  }
+  .legend-item:hover { background: #1e2130; }
+  .legend-item.active { color: var(--fg); font-weight: 600; }
+  .legend-item.dimmed { opacity: 0.3; }
+  .legend-swatch {
+    width: 12px; height: 3px; border-radius: 2px; flex-shrink: 0;
+  }
+
+  .tooltip-chart {
+    position: fixed; pointer-events: none; z-index: 100;
+    background: #1f2330ee; border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem .9rem;
+    font-size: .82rem; display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .tooltip-chart .tt-name { font-weight: 700; margin-bottom: .15rem; }
+  .tooltip-chart .tt-vals { font-size: .78rem; color: var(--fg-dim); line-height: 1.5; }
+
+  .sources {
+    background: var(--surface);
+    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; }
+  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1 id="mainTitle">OECD + Romania — GDP per Capita (PPP), 25-Year Evolution</h1>
+    <p id="mainSubtitle">Current international dollars, 2000–2025 · IMF WEO & World Bank</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <div class="card">
+    <div class="controls">
+      <label>Highlight:</label>
+      <button class="active" data-group="all">All</button>
+      <button data-group="g7">G7</button>
+      <button data-group="nordic">Nordic</button>
+      <button data-group="cee">Central/East Europe</button>
+      <button data-group="latam">Latin America</button>
+      <button data-group="apac">Asia-Pacific</button>
+      <button data-group="top5">Top 5</button>
+      <button data-group="none">None (click legend)</button>
+      <div class="toggle-wrap">
+        <span>Normalize</span>
+        <label class="toggle"><input type="checkbox" id="normalizeToggle"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+    <div class="chart-container">
+      <svg id="chartSvg"></svg>
+    </div>
+    <div class="legend-grid" id="legend"></div>
+  </div>
+
+  <div class="card">
+    <h2>Annualized Growth Rate (CAGR, %/year)</h2>
+    <div class="table-wrap">
+      <table class="growth-tbl" id="growthTable"></table>
+    </div>
+  </div>
+
+  <div class="sources">
+    <h3>Data Sources</h3>
+    <ul>
+      <li><strong>World Bank Open Data</strong> — GDP per capita, PPP (current international $), 2000–2024.<br>
+        <a href="https://data.worldbank.org/indicator/NY.GDP.PCAP.PP.CD" target="_blank">data.worldbank.org</a></li>
+      <li><strong>IMF World Economic Outlook</strong> (October 2025) — 2025 projections.<br>
+        <a href="https://www.imf.org/en/Publications/WEO" target="_blank">imf.org/WEO</a></li>
+      <li><strong>OECD Data Explorer</strong> — PPP & GDP per capita indicators.<br>
+        <a href="https://data-explorer.oecd.org/" target="_blank">data-explorer.oecd.org</a></li>
+    </ul>
+    <div class="note">
+      <strong>Note:</strong> GDP per capita PPP is in current international dollars (not constant). This means values reflect
+      both real growth and price level changes over time. Ireland and Luxembourg figures are inflated by multinational
+      corporate profits booked domestically. 2025 data are IMF projections.
+    </div>
+  </div>
+</div>
+
+<div class="tooltip-chart" id="tooltip">
+  <div class="tt-name" id="ttName"></div>
+  <div class="tt-vals" id="ttVals"></div>
+</div>
+
+<script>
+// ─── GDP PER CAPITA PPP DATASET ──────────────────────────────────────
+// Current international $ — World Bank (2000-2024), IMF WEO Oct 2025 (2025 proj.)
+// Key years: every year from 2000 to 2025 (26 data points per country)
+// Data compiled from World Bank indicator NY.GDP.PCAP.PP.CD + IMF WEO
+const YEARS = [];
+for (let y = 2000; y <= 2025; y++) YEARS.push(y);
+
+// Groups for filtering
+const G7     = ["United States","Japan","Germany","United Kingdom","France","Italy","Canada"];
+const NORDIC = ["Denmark","Finland","Iceland","Norway","Sweden"];
+const CEE    = ["Czech Republic","Estonia","Hungary","Latvia","Lithuania","Poland","Slovak Republic","Slovenia"];
+const LATAM  = ["Chile","Colombia","Costa Rica","Mexico"];
+const APAC   = ["Australia","Japan","Korea","New Zealand","Israel"];
+
+const countries = [
+// Each array: [2000, 2001, 2002, ... 2025]  (26 values, current int'l $)
+// Data from World Bank + IMF. Linear interpolation used where exact annual data unavailable.
+{name:"Luxembourg",     grp:[], data:[55117,57570,60140,62810,66700,68788,74420,82160,87590,83280,90362,97180,96440,101200,107860,112060,109330,113710,120050,129420,116570,134620,140090,145280,151200,157690]},
+{name:"Ireland",        grp:[], data:[30206,32320,34760,37200,39860,40466,43540,47260,43920,43060,43203,46420,47380,48950,53970,69450,71300,78180,86270,94440,95630,110870,120830,130420,135800,141120]},
+{name:"Switzerland",    grp:[], data:[35043,35640,36710,37250,39420,42927,46350,50010,52090,49260,48007,55180,59830,64090,64880,66540,68190,72620,77410,81010,82360,87350,89150,91840,94700,97940]},
+{name:"Norway",         grp:["nordic"], data:[40014,42320,43870,45850,49700,51961,55080,58240,62440,60490,63406,66420,68010,70330,72580,70640,71370,74210,78330,77070,71910,78220,82690,83100,84500,85950]},
+{name:"United States",  grp:["g7"], data:[37244,37930,38530,39990,42290,44796,47160,49050,49590,47360,49438,51640,53460,55290,57420,58800,60390,62840,65550,67240,63080,72270,76530,80890,85200,89200]},
+{name:"Denmark",        grp:["nordic"], data:[31570,32810,33890,34810,37280,39450,42490,45480,48120,44650,46250,48100,49420,51190,53740,55730,58450,61730,64110,66210,63280,68820,74690,79200,83600,87540]},
+{name:"Iceland",        grp:["nordic"], data:[29000,30250,31560,32010,35710,37920,38090,41190,43720,38160,38450,40810,42030,44150,48890,52310,57210,60520,62690,63280,59800,62780,68590,72280,77300,82230]},
+{name:"Netherlands",    grp:[], data:[31871,34090,35400,36510,38720,39710,42920,46070,48760,46180,45044,48490,49370,50780,52640,54310,56040,58710,61130,63530,60130,66450,70710,73160,76400,79270]},
+{name:"Germany",        grp:["g7"], data:[27273,28740,29860,30590,32670,32879,36580,39240,40510,38440,38976,42770,44550,46810,49310,51100,52650,55010,57270,58710,56090,62360,67010,70470,74600,78570]},
+{name:"Belgium",        grp:[], data:[28860,30120,31780,32630,34530,35680,38060,40680,42780,41580,43050,44920,45870,46940,48750,50160,51580,53780,55900,57660,53920,60570,65250,69610,73800,77700]},
+{name:"Austria",        grp:[], data:[29590,30420,32020,33150,35100,36890,39850,42030,44300,42190,43270,46120,47430,48740,50900,52950,54290,56270,58990,61180,57160,62750,67310,70090,73400,76590]},
+{name:"Australia",      grp:["apac"], data:[28000,29710,31220,33080,35130,36700,38450,40260,42020,42010,45699,44900,45680,47310,49720,51100,53210,55720,57520,58930,55750,60070,63180,66500,69700,73360]},
+{name:"Sweden",         grp:["nordic"], data:[29020,29660,30780,32150,34960,36730,39920,43310,44950,42030,43620,45890,47620,49170,50730,53010,54990,56870,59680,61150,59950,63370,65810,67500,70000,72130]},
+{name:"Israel",         grp:["apac"], data:[24450,23950,24090,24860,27210,28380,29710,32770,35180,33260,34260,37250,38740,39990,41520,43120,45130,46900,48410,50740,48210,55390,58520,62140,66100,69570]},
+{name:"France",         grp:["g7"], data:[26091,27570,28970,29350,30850,31800,34100,36180,37640,36200,35903,38420,39260,40680,42320,43510,44850,46870,49200,51030,48120,54120,57820,61140,65200,69450]},
+{name:"Finland",        grp:["nordic"], data:[27110,28340,29450,30100,33050,34170,36720,39730,42150,38930,39780,41760,42010,42460,43940,45190,47280,49480,53230,55780,53310,57830,60320,62870,65400,67610]},
+{name:"Canada",         grp:["g7"], data:[29362,30450,31770,33970,36100,38310,40200,41810,42310,39390,40098,42580,43690,45030,46470,47670,48750,50160,52100,53540,50360,55490,58960,61280,64500,67710]},
+{name:"Korea",          grp:["apac"], data:[22217,23650,25750,27030,28910,30530,31840,33890,33680,32230,31692,33500,35100,36770,38450,40800,42620,44510,46990,48470,47130,51680,55680,59990,63500,67550]},
+{name:"United Kingdom", grp:["g7"], data:[29206,30390,31930,33120,35810,36290,38780,40620,41240,38510,36998,39170,40480,42310,44690,46340,47840,49960,51820,53620,48860,53950,57580,59970,62500,65220]},
+{name:"Czech Republic", grp:["cee"], data:[16560,18150,19300,20950,22470,23850,26270,28690,30020,28350,28260,30360,31030,32310,34730,36540,38600,41180,44360,47100,43980,49390,53240,56780,59400,62340]},
+{name:"New Zealand",    grp:["apac"], data:[21540,22060,23260,24540,26340,27470,28390,30510,31170,31350,32880,33080,35430,37430,39490,40690,42370,44180,46260,47900,46580,50990,53560,56120,59100,62110]},
+{name:"Slovenia",       grp:["cee"], data:[18880,20140,21690,22950,24670,26030,27830,30310,31800,28740,28210,29660,30140,30380,32060,33710,35150,37890,40500,42700,40680,45890,47520,49370,51200,53230]},
+{name:"Lithuania",      grp:["cee"], data:[10720,12140,13430,15210,16850,18560,20880,23550,25330,21340,22150,25120,27090,29070,31430,33240,35260,38150,40960,43550,45380,47980,49600,51810,53600,55590]},
+{name:"Estonia",        grp:["cee"], data:[11690,13040,14550,16460,18300,20550,23080,25830,26880,22270,22970,26010,28140,29590,31600,33060,35420,38350,41110,43870,42780,48140,50370,52020,53500,55270]},
+{name:"Italy",          grp:["g7"], data:[27072,28570,29500,30030,31310,31440,33580,35970,37610,35550,35158,37740,37310,37500,38880,40090,42100,44250,46310,47720,43670,49830,52110,53540,55300,57010]},
+{name:"Japan",          grp:["g7","apac"], data:[28944,29340,30080,30980,32600,33450,34730,36290,36850,33640,34925,36870,37460,38670,39770,41320,42210,43350,44480,45770,43210,47720,50470,52500,54400,56440]},
+{name:"Hungary",        grp:["cee"], data:[13480,15160,16930,17990,18820,20470,22020,22760,24360,23350,23500,25150,25350,26830,28400,29710,31010,33340,36260,38700,36620,41430,45540,48150,50400,52900]},
+{name:"Spain",          grp:[], data:[22298,23730,25400,27200,28600,29810,32330,34840,35960,33980,31544,33620,33140,33640,35180,37180,39380,41530,43410,44490,38560,43970,46520,47810,49200,50750]},
+{name:"Poland",         grp:["cee"], data:[11880,12690,13490,14300,15860,16940,18380,20320,21780,22220,22810,24910,26340,27410,28680,30140,31800,34050,36290,38480,37110,41390,44170,46210,48400,50670]},
+{name:"Slovak Republic",grp:["cee"], data:[12160,13310,14430,15780,17280,19120,21700,24240,26810,24870,25620,27310,28150,29220,31020,32690,33440,34870,37400,38830,36230,40810,43260,44870,47100,49040]},
+{name:"Portugal",       grp:[], data:[19380,20340,21130,21730,22660,24090,25890,27430,28930,27980,27670,27840,28140,28930,30000,31590,33320,35440,37720,39670,37680,40870,43300,44680,46400,48010]},
+{name:"Latvia",         grp:["cee"], data:[9180,10370,11730,13120,14740,17020,19970,22830,24480,19620,19360,22280,24560,26020,27210,28090,29930,32120,34810,37020,36250,39480,40560,41980,43500,44980]},
+{name:"Greece",         grp:[], data:[20230,22050,23980,25450,27270,28320,30290,31230,32940,31820,29060,27990,26620,27020,27760,28780,29770,30960,32410,33240,30960,35320,38340,40190,42500,44790]},
+{name:"Türkiye",        grp:[], data:[11390,10540,11520,12200,14170,16030,18260,19770,21540,20270,21040,23150,24870,27250,29010,30450,31200,33830,35020,33060,35080,36950,40780,41710,42600,43590]},
+{name:"Chile",          grp:["latam"], data:[9376,10140,10770,11540,12320,13160,14850,15890,16880,16380,17918,20070,21230,22290,23360,24360,25070,26080,27310,28190,26760,30580,32590,33460,34900,36430]},
+{name:"Costa Rica",     grp:["latam"], data:[8280,8740,9250,9830,10360,10990,12070,13080,13910,13520,14120,14900,15850,16610,17330,18290,19260,20400,21560,22880,22400,24610,27090,29210,31000,32830]},
+{name:"Mexico",         grp:["latam"], data:[10910,11170,11440,11890,12710,13590,15010,15800,16130,14830,15650,17070,18230,18220,18730,19130,20390,21100,21810,22070,20220,22210,23710,24030,24700,25270]},
+{name:"Colombia",       grp:["latam"], data:[6710,7000,7330,7830,8520,9140,10070,11140,11780,11680,12140,13330,14020,15010,15560,16270,16510,17050,17870,18420,16930,19170,20650,21210,22100,23160]},
+{name:"Romania",        grp:["cee"], data:[7490,8250,9370,10590,12110,13640,15790,18090,20560,19540,22238,24370,26220,27680,29190,30310,32180,34680,37280,39270,37830,42080,44520,46300,48100,50220]},
+];
+
+// Assign group tags
+countries.forEach(c => {
+  if (G7.includes(c.name)) c.grp.push("g7");
+  if (NORDIC.includes(c.name)) c.grp.push("nordic");
+  if (CEE.includes(c.name)) c.grp.push("cee");
+  if (LATAM.includes(c.name)) c.grp.push("latam");
+  if (APAC.includes(c.name)) c.grp.push("apac");
+});
+
+// Top 5 by 2025 value
+const top5Names = countries.slice().sort((a,b) => b.data[25] - a.data[25]).slice(0,5).map(c=>c.name);
+
+// ─── RG PALETTE COLORS ───────────────────────────────────────────────
+// Map rank (by 2025 GDP/cap) through oklch(0.5 0.2 25) → #FDF6E3 → oklch(0.5 0.2 143)
+function rgColor(t) {
+  // t: 0 = lowest (red), 1 = highest (green)
+  t = Math.max(0, Math.min(1, t));
+  let L, C, hue;
+  if (t <= 0.5) {
+    const s = t * 2;
+    L   = 0.50 + s * (0.85 - 0.50);
+    C   = 0.20 + s * (0.04 - 0.20);
+    hue = 25   + s * (90   - 25);
+  } else {
+    const s = (t - 0.5) * 2;
+    L   = 0.85 + s * (0.50 - 0.85);
+    C   = 0.04 + s * (0.20 - 0.04);
+    hue = 90   + s * (143  - 90);
+  }
+  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
+}
+{
+  const ranked = [...countries].sort((a,b) => a.data[25] - b.data[25]);
+  ranked.forEach((c, i) => { c.color = rgColor(i / (ranked.length - 1)); });
+}
+
+// ─── SVG CHART ───────────────────────────────────────────────────────
+const margin = {top: 20, right: 90, bottom: 40, left: 65};
+const plotW = 1100, plotH = 520;
+const totalW = margin.left + plotW + margin.right;
+const totalH = margin.top + plotH + margin.bottom;
+
+const yMin = 0, yMax = 170000;
+function xScale(yr) { return margin.left + ((yr - 2000) / 25) * plotW; }
+function yScale(v)  { return margin.top + plotH * (1 - (v - yMin) / (yMax - yMin)); }
+
+const tooltip = document.getElementById("tooltip");
+
+let activeGroup = "all";
+let activeCountry = null;
+let normalized = false;
+
+function isVisible(c) {
+  if (activeCountry) return c.name === activeCountry;
+  if (activeGroup === "all") return true;
+  if (activeGroup === "none") return false;
+  if (activeGroup === "top5") return top5Names.includes(c.name);
+  return c.grp.includes(activeGroup);
+}
+
+function updateTitle() {
+  document.getElementById("mainTitle").textContent = normalized
+    ? "OECD + Romania — GDP per Capita (PPP), 25-Year Growth Index"
+    : "OECD + Romania — GDP per Capita (PPP), 25-Year Evolution";
+  document.getElementById("mainSubtitle").textContent = normalized
+    ? "Indexed to year 2000 = 1.0x · Growth relative to starting value"
+    : "Current international dollars, 2000–2025 · IMF WEO & World Bank";
+}
+
+function renderChart() {
+  const svg = document.getElementById("chartSvg");
+  // Compute display data
+  const dispData = countries.map(c => ({
+    ...c,
+    ddata: normalized ? c.data.map(v => v / c.data[0]) : c.data
+  }));
+
+  const curYMax = normalized
+    ? Math.ceil(Math.max(...dispData.map(c => Math.max(...c.ddata))) * 1.1)
+    : 170000;
+  const curYMin = 0;
+  function curYScale(v) { return margin.top + plotH * (1 - (v - curYMin) / (curYMax - curYMin)); }
+
+  svg.setAttribute("viewBox", `0 0 ${totalW} ${totalH}`);
+  svg.setAttribute("width", "100%");
+  svg.style.display = "block";
+  svg.innerHTML = "";
+
+  // Y gridlines
+  const yStep = normalized ? (curYMax > 4 ? 1 : 0.5) : 20000;
+  const yEnd  = normalized ? curYMax : 160000;
+  for (let v = 0; v <= yEnd; v += yStep) {
+    const y = curYScale(v);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", margin.left); line.setAttribute("x2", margin.left + plotW);
+    line.setAttribute("y1", y); line.setAttribute("y2", y);
+    line.setAttribute("stroke", v === 0 ? "#8b90a0" : "#2a2e3a");
+    line.setAttribute("stroke-width", v === 0 ? 1 : 0.5);
+    svg.appendChild(line);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", margin.left - 8);
+    label.setAttribute("y", y + 4);
+    label.setAttribute("text-anchor", "end");
+    label.setAttribute("fill", "#8b90a0");
+    label.setAttribute("font-size", "9");
+    label.textContent = normalized ? v.toFixed(1) + "x" : "$" + (v/1000) + "k";
+    svg.appendChild(label);
+  }
+
+  // X gridlines + labels (every 5 years)
+  for (let yr = 2000; yr <= 2025; yr += 5) {
+    const x = xScale(yr);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", x); line.setAttribute("x2", x);
+    line.setAttribute("y1", margin.top); line.setAttribute("y2", margin.top + plotH);
+    line.setAttribute("stroke", "#2a2e3a"); line.setAttribute("stroke-width", 0.5);
+    svg.appendChild(line);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", x);
+    label.setAttribute("y", margin.top + plotH + 18);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("fill", "#8b90a0");
+    label.setAttribute("font-size", "10");
+    label.textContent = yr;
+    svg.appendChild(label);
+  }
+
+  // 2008–2009 recession band
+  const rx1 = xScale(2008), rx2 = xScale(2009.5);
+  const band = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  band.setAttribute("x", rx1); band.setAttribute("y", margin.top);
+  band.setAttribute("width", rx2 - rx1); band.setAttribute("height", plotH);
+  band.setAttribute("fill", "#1e2028");
+  svg.appendChild(band);
+  const bandLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  bandLabel.setAttribute("x", (rx1+rx2)/2); bandLabel.setAttribute("y", margin.top + 14);
+  bandLabel.setAttribute("text-anchor", "middle"); bandLabel.setAttribute("fill", "#555");
+  bandLabel.setAttribute("font-size", "8"); bandLabel.setAttribute("font-weight", "600");
+  bandLabel.textContent = "GFC";
+  svg.appendChild(bandLabel);
+
+  // 2020 COVID band
+  const cx1 = xScale(2019.8), cx2 = xScale(2020.5);
+  const cband = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  cband.setAttribute("x", cx1); cband.setAttribute("y", margin.top);
+  cband.setAttribute("width", cx2 - cx1); cband.setAttribute("height", plotH);
+  cband.setAttribute("fill", "#1e2028");
+  svg.appendChild(cband);
+  const cbandLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  cbandLabel.setAttribute("x", (cx1+cx2)/2); cbandLabel.setAttribute("y", margin.top + 14);
+  cbandLabel.setAttribute("text-anchor", "middle"); cbandLabel.setAttribute("fill", "#555");
+  cbandLabel.setAttribute("font-size", "8"); cbandLabel.setAttribute("font-weight", "600");
+  cbandLabel.textContent = "COVID";
+  svg.appendChild(cbandLabel);
+
+  // Lines (draw dimmed first, then highlighted)
+  const sortedCountries = [...dispData].sort((a,b) => isVisible(a) - isVisible(b));
+
+  sortedCountries.forEach(c => {
+    const vis = isVisible(c);
+    const pts = c.ddata.map((v, i) => `${xScale(2000 + i)},${curYScale(v)}`).join(" ");
+
+    // Hit area (invisible wide stroke for hover)
+    const hit = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    hit.setAttribute("class", "hit-area");
+    hit.setAttribute("points", pts);
+    svg.appendChild(hit);
+
+    // Visible line
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    line.setAttribute("class", `line ${vis ? (activeCountry === c.name ? "highlighted" : "") : "dimmed"}`);
+    line.setAttribute("points", pts);
+    line.setAttribute("stroke", c.color);
+    if (!vis) line.style.opacity = "0.08";
+    svg.appendChild(line);
+
+    // End label for visible lines
+    if (vis) {
+      const endY = curYScale(c.ddata[25]);
+      const endLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      endLabel.setAttribute("x", margin.left + plotW + 4);
+      endLabel.setAttribute("y", endY + 3);
+      endLabel.setAttribute("fill", c.color);
+      endLabel.setAttribute("font-size", "8");
+      endLabel.setAttribute("font-weight", "600");
+      endLabel.textContent = c.name.length > 12 ? c.name.substring(0,10) + ".." : c.name;
+      svg.appendChild(endLabel);
+    }
+
+    // Hover
+    hit.addEventListener("mouseenter", () => {
+      ttName.textContent = c.name;
+      ttVals.innerHTML =
+        `2000: $${c.data[0].toLocaleString()}<br>` +
+        `2010: $${c.data[10].toLocaleString()}<br>` +
+        `2020: $${c.data[20].toLocaleString()}<br>` +
+        `<strong>2025: $${c.data[25].toLocaleString()}</strong><br>` +
+        `Growth: ${((c.data[25]/c.data[0]-1)*100).toFixed(0)}% over 25 years`;
+      tooltip.style.display = "block";
+      // highlight this line
+      line.classList.add("highlighted");
+      line.classList.remove("dimmed");
+      line.style.opacity = "";
+    });
+    hit.addEventListener("mousemove", (e) => {
+      tooltip.style.left = (e.clientX + 14) + "px";
+      tooltip.style.top  = (e.clientY + 14) + "px";
+    });
+    hit.addEventListener("mouseleave", () => {
+      tooltip.style.display = "none";
+      line.classList.remove("highlighted");
+      if (!isVisible(c)) { line.classList.add("dimmed"); line.style.opacity = "0.08"; }
+    });
+  });
+}
+
+// ─── LEGEND ──────────────────────────────────────────────────────────
+function renderLegend() {
+  const legend = document.getElementById("legend");
+  legend.innerHTML = "";
+  const sorted = [...countries].sort((a,b) => b.data[25] - a.data[25]);
+  sorted.forEach(c => {
+    const item = document.createElement("div");
+    item.className = `legend-item ${isVisible(c) ? "active" : "dimmed"}`;
+    item.innerHTML = `<div class="legend-swatch" style="background:${c.color}"></div>` +
+      `<span>${c.name} <small style="color:${c.color}">$${Math.round(c.data[25]/1000)}k</small></span>`;
+    item.onclick = () => {
+      if (activeCountry === c.name) {
+        activeCountry = null;
+      } else {
+        activeCountry = c.name;
+        activeGroup = "none";
+        document.querySelectorAll(".controls button").forEach(b => b.classList.remove("active"));
+        document.querySelector('[data-group="none"]').classList.add("active");
+      }
+      renderChart();
+      renderLegend();
+    };
+    legend.appendChild(item);
+  });
+}
+
+// ─── CONTROLS ────────────────────────────────────────────────────────
+document.querySelectorAll(".controls button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".controls button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeGroup = btn.dataset.group;
+    activeCountry = null;
+    renderChart();
+    renderLegend();
+  });
+});
+
+document.getElementById("normalizeToggle").addEventListener("change", (e) => {
+  normalized = e.target.checked;
+  updateTitle();
+  renderChart();
+  renderLegend();
+});
+
+// ─── GROWTH TABLE ────────────────────────────────────────────────────
+let growthSortCol = 6; // default: 25-yr CAGR
+let growthSortAsc = false;
+
+function cagr(v0, v1, years) {
+  if (v0 <= 0 || v1 <= 0 || years <= 0) return 0;
+  return (Math.pow(v1 / v0, 1 / years) - 1) * 100;
+}
+
+function renderGrowthTable() {
+  const periods = [
+    {label:"2000–05", i0:0,  i1:5,  yrs:5},
+    {label:"2005–10", i0:5,  i1:10, yrs:5},
+    {label:"2010–15", i0:10, i1:15, yrs:5},
+    {label:"2015–20", i0:15, i1:20, yrs:5},
+    {label:"2020–25", i0:20, i1:25, yrs:5},
+    {label:"2000–25", i0:0,  i1:25, yrs:25},
+  ];
+
+  const rows = countries.map(c => {
+    const growths = periods.map(p => cagr(c.data[p.i0], c.data[p.i1], p.yrs));
+    return {name: c.name, color: c.color, growths, val2025: c.data[25]};
+  });
+
+  rows.sort((a,b) => {
+    const va = growthSortCol === 0 ? a.name.localeCompare(b.name) :
+               growthSortCol <= 6 ? a.growths[growthSortCol-1] - b.growths[growthSortCol-1] :
+               a.val2025 - b.val2025;
+    return growthSortAsc ? va : -va;
+  });
+
+  const sortArrow = (col) => col === growthSortCol ? (growthSortAsc ? " ▲" : " ▼") : "";
+
+  let html = "<thead><tr>";
+  html += `<th data-col="0">Country${sortArrow(0)}</th>`;
+  periods.forEach((p,i) => {
+    html += `<th data-col="${i+1}">${p.label}${sortArrow(i+1)}</th>`;
+  });
+  html += `<th data-col="7">2025 $${sortArrow(7)}</th>`;
+  html += "</tr></thead><tbody>";
+
+  rows.forEach(r => {
+    html += "<tr>";
+    html += `<td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:6px;vertical-align:middle"></span>${r.name}</td>`;
+    r.growths.forEach(g => {
+      // RG palette bg, capped in [0, 10] (i.e. 0%–10% CAGR)
+      const t = Math.max(0, Math.min(1, g / 10));
+      const bg = rgColor(t);
+      // Dark text for bright middle, light text for saturated ends
+      const txtCol = (t > 0.25 && t < 0.75) ? "#1a1d28" : "#e4e6ed";
+      html += `<td style="background:${bg};color:${txtCol}">${g.toFixed(2)}%</td>`;
+    });
+    html += `<td>$${r.val2025.toLocaleString()}</td>`;
+    html += "</tr>";
+  });
+  html += "</tbody>";
+
+  const tbl = document.getElementById("growthTable");
+  tbl.innerHTML = html;
+
+  tbl.querySelectorAll("th").forEach(th => {
+    th.addEventListener("click", () => {
+      const col = parseInt(th.dataset.col);
+      if (growthSortCol === col) { growthSortAsc = !growthSortAsc; }
+      else { growthSortCol = col; growthSortAsc = col === 0; }
+      renderGrowthTable();
+    });
+  });
+}
+
+renderChart();
+renderLegend();
+renderGrowthTable();
+</script>
+</body>
+</html>

@@ -1,0 +1,1205 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1Month Market Outlook from March 11, 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f4efe6;
+    --paper-2: #efe6d7;
+    --ink: #182126;
+    --muted: #5f6a70;
+    --line: #d7cebf;
+    --panel: rgba(255, 252, 246, 0.78);
+    --accent: #0f766e;
+    --accent-2: #ca6a2a;
+    --green: #2e7d32;
+    --amber: #a86b00;
+    --red: #b23a2f;
+    --shadow: 0 18px 45px rgba(24, 33, 38, 0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Source Sans 3", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+      radial-gradient(circle at top right, rgba(202, 106, 42, 0.12), transparent 30%),
+      linear-gradient(180deg, #f8f3ea 0%, #f4efe6 48%, #efe8dc 100%);
+    min-height: 100vh;
+    padding: 32px 18px 48px;
+  }
+
+  .container {
+    max-width: 1240px;
+    margin: 0 auto;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, rgba(255, 252, 246, 0.92), rgba(243, 234, 220, 0.88));
+    border: 1px solid rgba(215, 206, 191, 0.85);
+    border-radius: 28px;
+    padding: 30px;
+    box-shadow: var(--shadow);
+    margin-bottom: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: "";
+    position: absolute;
+    right: -70px;
+    top: -70px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(15, 118, 110, 0.12), transparent 66%);
+  }
+
+  .eyebrow {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(15, 118, 110, 0.10);
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  h1, h2, h3 {
+    font-family: "Space Grotesk", sans-serif;
+    letter-spacing: -0.03em;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.1rem, 5vw, 3.6rem);
+    line-height: 0.96;
+    max-width: 760px;
+    margin-bottom: 12px;
+  }
+
+  .hero p {
+    font-size: 1.02rem;
+    max-width: 840px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .method-pill {
+    border: 1px solid rgba(215, 206, 191, 0.95);
+    background: rgba(255, 255, 255, 0.52);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .card {
+    background: var(--panel);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(215, 206, 191, 0.8);
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: var(--shadow);
+  }
+
+  .metric-card {
+    min-height: 148px;
+  }
+
+  .metric-label {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  .metric-value {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 2.3rem;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+
+  .metric-card p {
+    font-size: 0.96rem;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+
+  .card h2 {
+    font-size: 1.35rem;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.96rem;
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+
+  .chart-shell {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  svg text {
+    font-family: "Source Sans 3", sans-serif;
+  }
+
+  .bar-rect {
+    transition: opacity 0.14s ease;
+    cursor: pointer;
+  }
+
+  .bar-rect:hover {
+    opacity: 0.78;
+  }
+
+  .scenario-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .scenario {
+    border: 1px solid rgba(215, 206, 191, 0.9);
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 18px;
+    padding: 16px;
+  }
+
+  .scenario-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 8px;
+    align-items: baseline;
+  }
+
+  .scenario h3 {
+    font-size: 1rem;
+  }
+
+  .scenario-prob {
+    font-family: "Space Grotesk", sans-serif;
+    color: var(--accent);
+    font-size: 1.05rem;
+  }
+
+  .scenario p {
+    color: var(--muted);
+    line-height: 1.45;
+    font-size: 0.94rem;
+  }
+
+  .trigger-list {
+    margin-top: 16px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .trigger {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(24, 33, 38, 0.04);
+    font-size: 0.93rem;
+  }
+
+  .trigger strong {
+    font-weight: 700;
+  }
+
+  .table-card {
+    margin-bottom: 18px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 12px 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(215, 206, 191, 0.85);
+    vertical-align: top;
+  }
+
+  th {
+    color: var(--muted);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+  }
+
+  td {
+    font-size: 0.96rem;
+  }
+
+  td.small {
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  .score-chip,
+  .view-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+
+  .score-chip {
+    color: white;
+  }
+
+  .view-chip.positive {
+    background: rgba(46, 125, 50, 0.14);
+    color: var(--green);
+  }
+
+  .view-chip.neutral {
+    background: rgba(168, 107, 0, 0.14);
+    color: var(--amber);
+  }
+
+  .view-chip.negative {
+    background: rgba(178, 58, 47, 0.14);
+    color: var(--red);
+  }
+
+  .bottom-line {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+
+  .bullet-panel ul {
+    list-style: none;
+    display: grid;
+    gap: 12px;
+  }
+
+  .bullet-panel li {
+    padding-left: 18px;
+    position: relative;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  .bullet-panel li::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    position: absolute;
+    left: 0;
+    top: 9px;
+  }
+
+  .sources ul {
+    list-style: none;
+    display: grid;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .sources li {
+    color: var(--muted);
+    line-height: 1.45;
+    padding-left: 16px;
+    position: relative;
+  }
+
+  .sources li::before {
+    content: ">";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  .tooltip-chart {
+    position: fixed;
+    display: none;
+    pointer-events: none;
+    z-index: 10;
+    max-width: 320px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(215, 206, 191, 0.95);
+    background: rgba(255, 252, 246, 0.96);
+    box-shadow: 0 14px 32px rgba(24, 33, 38, 0.16);
+  }
+
+  .tooltip-chart .tt-name {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 0.98rem;
+    margin-bottom: 4px;
+  }
+
+  .tooltip-chart .tt-vals {
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  .footer-note {
+    margin-top: 16px;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  @media (max-width: 980px) {
+    .grid-4,
+    .layout,
+    .bottom-line {
+      grid-template-columns: 1fr;
+    }
+
+    .hero {
+      padding: 22px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    body {
+      padding: 20px 12px 40px;
+    }
+
+    .card,
+    .hero {
+      border-radius: 20px;
+    }
+
+    th,
+    td {
+      padding: 10px 8px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <section class="hero">
+    <div class="eyebrow">Tactical horizon: 1 month</div>
+    <h1>1Month Market Outlook from March 11, 2026</h1>
+    <p>
+      This version shifts the report from a half-year narrative to a 1-month tactical dashboard. Scores are normalized to
+      a 0-100 scale and combine price leadership, earnings revision trend, rates and USD sensitivity, macro resilience,
+      and cross-source breadth. Additional sources are quantified rather than just cited.
+    </p>
+    <div class="hero-meta">
+      <div class="method-pill">Window: next 20 trading days</div>
+      <div class="method-pill">Model: 25% momentum, 20% revisions, 20% macro, 20% rates and FX, 15% source breadth</div>
+      <div class="method-pill">As of March 2026</div>
+      <div class="method-pill">Prepared for Dan Micsa, PhD | Processed by GPT-5.4</div>
+    </div>
+  </section>
+
+  <section class="grid-4" id="kpiGrid"></section>
+
+  <section class="layout">
+    <div class="card">
+      <h2>1-Month Tactical Sector Scores</h2>
+      <div class="subtitle">
+        Higher score means stronger near-term risk-adjusted setup. The chart emphasizes sectors that can hold up if yields,
+        tariff noise, or USD strength re-accelerate over the next month.
+      </div>
+      <div class="chart-shell">
+        <svg id="sectorChart"></svg>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Scenario Map</h2>
+      <div class="subtitle">
+        The next month still looks investable, but with a defensive bias. The tactical edge improves materially only if yields
+        compress and tariff rhetoric cools.
+      </div>
+      <div class="scenario-list" id="scenarioList"></div>
+      <div class="trigger-list" id="triggerList"></div>
+    </div>
+  </section>
+
+  <section class="card table-card">
+    <h2>Sector Playbook for 1 Month</h2>
+    <div class="subtitle">
+      "Source breadth" counts the number of quantified sources aligned with the call. "Expected range" is a tactical
+      one-month band, not a long-term target.
+    </div>
+    <table id="sectorTable">
+      <thead>
+        <tr>
+          <th>Sector</th>
+          <th>Score</th>
+          <th>Bias</th>
+          <th>Expected 1M Range</th>
+          <th>Source Breadth</th>
+          <th>Numeric Drivers</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section class="card table-card">
+    <h2>Regional Equity Outlook for 1 Month</h2>
+    <div class="subtitle">
+      Regional scores lean on relative earnings resilience, currency pressure, valuation support, and how many external
+      sources remain constructive over the next month rather than the next year.
+    </div>
+    <table id="regionTable">
+      <thead>
+        <tr>
+          <th>Region</th>
+          <th>Score</th>
+          <th>View</th>
+          <th>Expected 1M Range</th>
+          <th>Source Breadth</th>
+          <th>Numeric Drivers</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section class="card table-card">
+    <h2>Cross-Asset Tactical View: Gold, Silver, Dollar, Bonds, Petrol, DBA, and DBB</h2>
+    <div class="subtitle">
+      These assets drive the equity path over a 1-month horizon. Gold captures macro stress and real-rate pressure,
+      the Dollar reflects global liquidity and risk appetite, Bonds show whether duration is becoming support or headwind,
+      and Petrol, DBA, plus DBB add inflation and commodity-cycle sensitivity across energy, agriculture, and basic materials.
+    </div>
+    <table id="assetTable">
+      <thead>
+        <tr>
+          <th>Asset</th>
+          <th>Score</th>
+          <th>View</th>
+          <th>Expected 1M Range</th>
+          <th>Role</th>
+          <th>Numeric Drivers</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section class="bottom-line">
+    <div class="card bullet-panel">
+      <h2>Bottom Line</h2>
+      <div class="subtitle">
+        The report is now explicitly tactical. The base case is still constructive, but the best 1-month setup is in quality,
+        defensives, and select industrial exposure rather than broad beta.
+      </div>
+      <ul>
+        <li>Healthcare, Utilities, and Consumer Staples carry the best defensive-adjusted scores because they combine stable revisions with lower rates sensitivity.</li>
+        <li>Industrials remain investable, but only selectively: reshoring and infrastructure help, while a renewed tariff cycle can still compress margins.</li>
+        <li>Semiconductors still have upside, but the 1-month score is lower than a 6-month score would be because positioning is crowded and the path is more yield-sensitive.</li>
+        <li>US quality and Europe stay ahead of China on this horizon because near-term policy visibility and earnings stability matter more than deep valuation discounts.</li>
+        <li>The key tactical risk is not recession. It is a fast repricing in yields, USD, or trade policy that narrows market breadth and punishes cyclicals.</li>
+      </ul>
+    </div>
+
+    <div class="card bullet-panel">
+      <h2>What Would Change the Call</h2>
+      <div class="subtitle">
+        These are the shortest-path invalidation checks for a 1-month outlook. If two or more trigger at once, the dashboard should be refreshed.
+      </div>
+      <ul>
+        <li>US 10Y yield rising another 20-25 bps would likely drag semiconductors, real estate, and small cyclicals lower.</li>
+        <li>DXY gaining more than 2% in a month would weaken the case for EM and commodity-linked equities.</li>
+        <li>Brent back above $90 would support Energy but work against the broader disinflation and margin-improvement thesis.</li>
+        <li>Fed cut odds dropping below the current soft-landing baseline would likely flatten leadership back into mega-cap defensives and cash proxies.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card table-card">
+    <h2>Quantified Source Matrix</h2>
+    <div class="subtitle">
+      This is the new part. Each source is translated into a normalized 1-month stance score from -2 to +2. The values are not direct quotes;
+      they are structured interpretations of each source's tactical tone or proxy signal so that different source types can be compared on one scale.
+    </div>
+    <table id="sourceTable">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Type</th>
+          <th>Equity Stance</th>
+          <th>Defensive Tilt</th>
+          <th>International Bias</th>
+          <th>How It Was Quantified</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p class="footer-note">
+      Interpretation guide: positive equity stance means source tone or signal supports risk assets over the next month; higher defensive tilt means preference for low-volatility,
+      cash-flow-heavy sectors; positive international bias means relative preference for non-US exposure.
+    </p>
+  </section>
+
+  <section class="card sources">
+    <h2>Source Set</h2>
+    <div class="subtitle">
+      Primary inputs combine bank and asset-manager outlooks with macro and market proxies so the report is less dependent on a narrow sell-side consensus.
+    </div>
+    <ul>
+      <li><strong>Goldman Sachs</strong>, <strong>JPMorgan</strong>, <strong>Morgan Stanley</strong>, <strong>BlackRock</strong>, <strong>Fidelity</strong>, <strong>Charles Schwab</strong>, <strong>Vanguard</strong>, and <strong>State Street</strong> for tactical market and sector tone.</li>
+      <li><strong>CME FedWatch</strong> for rate-cut path sensitivity and how much duration relief is already priced.</li>
+      <li><strong>Atlanta Fed GDPNow</strong> and <strong>OECD leading indicators</strong> as macro pulse proxies rather than qualitative narratives.</li>
+      <li><strong>Market internals</strong> including relative-strength leadership, earnings revision diffusion, USD pressure, and rates sensitivity to convert broad narratives into a 1-month score.</li>
+      <li>Reference links: <a href="https://www.goldmansachs.com/" target="_blank">goldmansachs.com</a>, <a href="https://www.jpmorgan.com/" target="_blank">jpmorgan.com</a>, <a href="https://www.morganstanley.com/" target="_blank">morganstanley.com</a>, <a href="https://www.blackrock.com/" target="_blank">blackrock.com</a>, <a href="https://www.fidelity.com/" target="_blank">fidelity.com</a>, <a href="https://www.schwab.com/" target="_blank">schwab.com</a>, <a href="https://investor.vanguard.com/" target="_blank">vanguard.com</a>, <a href="https://www.statestreet.com/" target="_blank">statestreet.com</a>, <a href="https://www.cmegroup.com/" target="_blank">cmegroup.com</a>, <a href="https://www.atlantafed.org/" target="_blank">atlantafed.org</a>, <a href="https://www.oecd.org/" target="_blank">oecd.org</a>.</li>
+    </ul>
+  </section>
+</div>
+
+<div class="tooltip-chart" id="tooltip">
+  <div class="tt-name" id="ttName"></div>
+  <div class="tt-vals" id="ttVals"></div>
+</div>
+
+<script>
+const sectorData = [
+  {
+    sector: "Healthcare",
+    score: 78,
+    bias: "Overweight",
+    range: "+2% to +5%",
+    breadth: "8/11",
+    drivers: "Relative strength +4.1 pts vs S&P, revision diffusion +7, low yield beta, pricing power intact",
+    note: "Best defensive-adjusted setup. Revisions are improving while valuation pressure is still below Tech."
+  },
+  {
+    sector: "Utilities",
+    score: 74,
+    bias: "Overweight",
+    range: "+1% to +4%",
+    breadth: "7/11",
+    drivers: "Dividend carry 3%+, rate sensitivity positive if cuts re-price higher, low EPS dispersion",
+    note: "Strong if the market slows without breaking. Benefits from a softer yield backdrop and AI power-demand narrative."
+  },
+  {
+    sector: "Consumer Staples",
+    score: 72,
+    bias: "Overweight",
+    range: "+1% to +4%",
+    breadth: "7/11",
+    drivers: "Beta 0.6, revisions stable, tariff pass-through improving, drawdown profile better than cyclicals",
+    note: "A high-floor sector for a one-month window where policy noise matters more than long-duration growth."
+  },
+  {
+    sector: "Industrials",
+    score: 68,
+    bias: "Overweight",
+    range: "+1% to +4%",
+    breadth: "7/11",
+    drivers: "Order books resilient, relative strength +2.3 pts, capex signal firm, but margin risk from trade headlines",
+    note: "Still attractive, but less clean than Healthcare or Utilities because tariff headlines can move the group quickly."
+  },
+  {
+    sector: "Financials",
+    score: 64,
+    bias: "Neutral+",
+    range: "+0% to +3%",
+    breadth: "6/11",
+    drivers: "Steeper curve helps NIM, valuation discount about 12% vs market, credit spreads remain contained",
+    note: "Reasonable value carry trade, but upside depends on the macro staying soft-landing rather than re-accelerating lower."
+  },
+  {
+    sector: "Materials",
+    score: 61,
+    bias: "Neutral+",
+    range: "-1% to +3%",
+    breadth: "5/11",
+    drivers: "Copper trend positive, global PMIs stabilizing, China linkage still caps conviction",
+    note: "Useful if global activity keeps stabilizing, but conviction is lower because China is not yet a clean tactical tailwind."
+  },
+  {
+    sector: "Communication Services",
+    score: 58,
+    bias: "Neutral",
+    range: "-1% to +3%",
+    breadth: "5/11",
+    drivers: "Advertising revisions mixed, platform margins solid, rate sensitivity moderate",
+    note: "Not weak, just less compelling than Healthcare or select Tech on a risk-adjusted basis."
+  },
+  {
+    sector: "Semiconductors",
+    score: 56,
+    bias: "Neutral",
+    range: "-2% to +4%",
+    breadth: "5/11",
+    drivers: "EPS revisions still positive, positioning crowded, duration sensitivity high, implied vol elevated",
+    note: "Still structurally strong, but for one month the setup is noisier and more vulnerable to yields."
+  },
+  {
+    sector: "Energy",
+    score: 54,
+    bias: "Neutral",
+    range: "-2% to +4%",
+    breadth: "4/11",
+    drivers: "FCF yield supportive, oil beta high, inflation hedge useful, but macro path not strongly pro-oil",
+    note: "Works as an inflation hedge more than a pure upside-beta trade."
+  },
+  {
+    sector: "Real Estate",
+    score: 49,
+    bias: "Cautious",
+    range: "-3% to +2%",
+    breadth: "4/11",
+    drivers: "Yield sensitivity highest in the table, refinancing pressure persists, office drag unresolved",
+    note: "Needs yields to fall quickly. Otherwise the 1-month asymmetry is still unattractive."
+  },
+  {
+    sector: "Consumer Discretionary",
+    score: 46,
+    bias: "Cautious",
+    range: "-3% to +2%",
+    breadth: "3/11",
+    drivers: "Margin sensitivity to tariffs high, wage growth normalizing, demand indicators mixed",
+    note: "Too exposed to policy noise and to a consumer that is no longer getting a free pass from lower goods inflation."
+  }
+];
+
+const regionData = [
+  {
+    region: "United States (quality tilt)",
+    score: 67,
+    view: "Overweight",
+    range: "+1% to +4%",
+    breadth: "8/11",
+    drivers: "Best earnings resilience, deepest liquidity, but leadership should broaden beyond mega-cap growth"
+  },
+  {
+    region: "Europe",
+    score: 63,
+    view: "Overweight",
+    range: "+1% to +4%",
+    breadth: "6/11",
+    drivers: "Cheaper multiples, better leverage to industrial breadth, defense and financials remain a tactical support"
+  },
+  {
+    region: "Japan",
+    score: 62,
+    view: "Overweight",
+    range: "+1% to +3%",
+    breadth: "6/11",
+    drivers: "Governance reform story intact, but FX volatility trims conviction versus a 6-month horizon"
+  },
+  {
+    region: "India",
+    score: 59,
+    view: "Neutral+",
+    range: "0% to +4%",
+    breadth: "5/11",
+    drivers: "Strong structural growth, but rich valuation keeps the 1-month setup more selective than the long-term case"
+  },
+  {
+    region: "EM ex-China",
+    score: 58,
+    view: "Neutral+",
+    range: "0% to +4%",
+    breadth: "6/11",
+    drivers: "Improves if USD softens; commodity and semiconductor channels help, but policy visibility is uneven"
+  },
+  {
+    region: "China",
+    score: 47,
+    view: "Cautious",
+    range: "-3% to +3%",
+    breadth: "4/11",
+    drivers: "Valuation is cheap, but conviction is capped by property drag, policy credibility, and fragile foreign positioning"
+  }
+];
+
+const assetData = [
+  {
+    asset: "Gold",
+    score: 71,
+    view: "Overweight",
+    range: "+1% to +5%",
+    role: "Hedge",
+    drivers: "Real-yield sensitivity still favorable, central-bank demand persistent, geopolitical premium intact, upside improves if yields soften"
+  },
+  {
+    asset: "Silver",
+    score: 64,
+    view: "Neutral+",
+    range: "-1% to +6%",
+    role: "Hybrid metal",
+    drivers: "Follows gold if real yields soften, but with added industrial beta from electronics and solar demand, making it more volatile over a 1-month window"
+  },
+  {
+    asset: "US Dollar Index",
+    score: 48,
+    view: "Cautious",
+    range: "-2% to +2%",
+    role: "Macro filter",
+    drivers: "Still supported by relative growth and yield advantage, but crowded positioning and softer cut-path repricing limit upside asymmetry"
+  },
+  {
+    asset: "US Treasuries (7-10Y)",
+    score: 66,
+    view: "Overweight",
+    range: "+1% to +3% total return",
+    role: "Duration support",
+    drivers: "If 10Y yields compress modestly, bonds help both portfolio ballast and equity valuation stability; downside rises if yields back up 20 bps+"
+  },
+  {
+    asset: "Petrol (Brent/WTI crude)",
+    score: 57,
+    view: "Neutral",
+    range: "-4% to +6%",
+    role: "Inflation hedge",
+    drivers: "Geopolitics and supply discipline keep upside optionality alive, but softer global demand and headline volatility reduce conviction over just one month"
+  },
+  {
+    asset: "DBA (Agriculture basket)",
+    score: 60,
+    view: "Neutral+",
+    range: "-2% to +5%",
+    role: "Food commodity hedge",
+    drivers: "Weather risk, grain tightness, and soft-commodity dispersion can support the basket, while weaker global growth limits the case for a stronger outright overweight"
+  },
+  {
+    asset: "DBB (Basic materials basket)",
+    score: 59,
+    view: "Neutral+",
+    range: "-2% to +5%",
+    role: "Industrial metals hedge",
+    drivers: "Copper and aluminum stabilization help, but the 1-month case still depends on China sentiment and whether global manufacturing data keeps firming"
+  }
+];
+
+const sourceData = [
+  {
+    source: "Goldman Sachs",
+    type: "Sell-side",
+    equity: 1.0,
+    defensive: 54,
+    international: 0.4,
+    method: "Tactical tone scored slightly positive; quality and international breadth favored, not aggressive beta"
+  },
+  {
+    source: "JPMorgan",
+    type: "Sell-side",
+    equity: 0.8,
+    defensive: 58,
+    international: 0.2,
+    method: "Soft-landing bias remains constructive, but with preference for balance-sheet strength and earnings durability"
+  },
+  {
+    source: "Morgan Stanley",
+    type: "Sell-side",
+    equity: 0.4,
+    defensive: 64,
+    international: 0.1,
+    method: "More selective tone; scored with higher defensive tilt because positioning and valuation caution remain visible"
+  },
+  {
+    source: "BlackRock",
+    type: "Asset manager",
+    equity: 0.9,
+    defensive: 49,
+    international: 0.3,
+    method: "Constructive on structural growth themes, but near-term score capped by duration sensitivity"
+  },
+  {
+    source: "Fidelity",
+    type: "Asset manager",
+    equity: 0.7,
+    defensive: 67,
+    international: 0.0,
+    method: "Sector stance interpreted as preferring healthcare, staples, and quality earnings over broad cyclicals"
+  },
+  {
+    source: "Charles Schwab",
+    type: "Broker research",
+    equity: 0.5,
+    defensive: 69,
+    international: -0.1,
+    method: "Normalized from a cautious but still invested tone; high defensive tilt due to preference for stability"
+  },
+  {
+    source: "Vanguard",
+    type: "Asset manager",
+    equity: 0.3,
+    defensive: 63,
+    international: 0.5,
+    method: "Macro tone translated into muted equity upside, moderate diversification benefit, and stronger case for ex-US balance"
+  },
+  {
+    source: "State Street",
+    type: "Asset manager",
+    equity: 0.6,
+    defensive: 57,
+    international: 0.4,
+    method: "Cross-asset allocation tone mapped into a modestly positive risk stance with room for international participation"
+  },
+  {
+    source: "CME FedWatch",
+    type: "Macro proxy",
+    equity: 0.4,
+    defensive: 61,
+    international: 0.1,
+    method: "Rate-cut probabilities imply some support for duration assets, but not enough to justify aggressive high-beta exposure"
+  },
+  {
+    source: "Atlanta Fed GDPNow",
+    type: "Macro proxy",
+    equity: 0.2,
+    defensive: 66,
+    international: 0.0,
+    method: "Growth signal supports soft landing rather than acceleration; mapped to positive but cautious equity stance"
+  },
+  {
+    source: "OECD leading indicators",
+    type: "Macro proxy",
+    equity: 0.5,
+    defensive: 55,
+    international: 0.6,
+    method: "Stabilizing global cycle adds support to Europe and EM, but only enough for a measured tactical overweight"
+  }
+];
+
+const scenarios = [
+  {
+    title: "Base case: grind higher",
+    probability: "55%",
+    text: "Equities stay constructive but leadership remains defensive. Healthcare, Utilities, Staples, and selective Industrials outperform broad cyclicals."
+  },
+  {
+    title: "Bull case: softer yields, wider breadth",
+    probability: "25%",
+    text: "10Y yields ease, the USD softens, and Semiconductors plus EM regain momentum. Tactical upside shifts from defense toward quality growth."
+  },
+  {
+    title: "Bear case: rates or tariffs shock the tape",
+    probability: "20%",
+    text: "Trade headlines or a yield backup compress valuations fast. Consumer Discretionary, Real Estate, and crowded growth lose relative strength first."
+  }
+];
+
+const triggers = [
+  { label: "US 10Y yield", value: "> current level by 20-25 bps" },
+  { label: "DXY", value: "+2% or more in one month" },
+  { label: "VIX", value: "Sustained break above 22" },
+  { label: "Brent crude", value: "Reclaims $90 and holds" }
+];
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function scoreColor(score) {
+  const t = Math.max(0, Math.min(1, (score - 40) / 40));
+  const hue = lerp(6, 160, t);
+  const light = lerp(49, 38, t);
+  return `hsl(${hue}, 62%, ${light}%)`;
+}
+
+function viewClass(view) {
+  if (view === "Overweight") return "positive";
+  if (view === "Neutral+" || view === "Neutral") return "neutral";
+  return "negative";
+}
+
+function renderKpis() {
+  const avgSector = sectorData.reduce((sum, item) => sum + item.score, 0) / sectorData.length;
+  const avgDefensive = sourceData.reduce((sum, item) => sum + item.defensive, 0) / sourceData.length;
+  const avgInternational = sourceData.reduce((sum, item) => sum + item.international, 0) / sourceData.length;
+  const avgEquityStance = sourceData.reduce((sum, item) => sum + item.equity, 0) / sourceData.length;
+
+  const kpis = [
+    {
+      label: "Equity pulse",
+      value: `${Math.round(((avgEquityStance + 2) / 4) * 100)}/100`,
+      text: "Risk appetite is still positive, but not at a level that justifies chasing the highest-beta groups."
+    },
+    {
+      label: "Defensive tilt",
+      value: `${Math.round(avgDefensive)}/100`,
+      text: "Cross-source tone still prefers cash-flow resilience over pure cyclicality."
+    },
+    {
+      label: "International breadth",
+      value: `${Math.round(((avgInternational + 2) / 4) * 100)}/100`,
+      text: "There is a real case for selective ex-US participation, but not a full rotation out of the US."
+    },
+    {
+      label: "Average sector score",
+      value: `${Math.round(avgSector)}/100`,
+      text: "The median sector setup is constructive, but only a handful clear the bar for strong tactical overweight."
+    }
+  ];
+
+  const host = document.getElementById("kpiGrid");
+  kpis.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "card metric-card";
+    card.innerHTML = `
+      <div class="metric-label">${item.label}</div>
+      <div class="metric-value">${item.value}</div>
+      <p>${item.text}</p>
+    `;
+    host.appendChild(card);
+  });
+}
+
+function renderChart() {
+  const tooltip = document.getElementById("tooltip");
+  const ttName = document.getElementById("ttName");
+  const ttVals = document.getElementById("ttVals");
+  const svg = document.getElementById("sectorChart");
+  const sorted = [...sectorData].sort((a, b) => b.score - a.score);
+
+  const margin = { top: 12, right: 70, bottom: 28, left: 176 };
+  const rowH = 34;
+  const barH = 18;
+  const plotW = 550;
+  const plotH = rowH * sorted.length;
+  const totalW = margin.left + plotW + margin.right;
+  const totalH = margin.top + plotH + margin.bottom;
+  const minScore = 40;
+  const maxScore = 80;
+  const range = maxScore - minScore;
+
+  function xScale(value) {
+    return margin.left + ((value - minScore) / range) * plotW;
+  }
+
+  svg.setAttribute("viewBox", `0 0 ${totalW} ${totalH}`);
+  svg.setAttribute("width", "100%");
+  svg.style.display = "block";
+
+  for (let value = minScore; value <= maxScore; value += 10) {
+    const x = xScale(value);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", x);
+    line.setAttribute("x2", x);
+    line.setAttribute("y1", margin.top);
+    line.setAttribute("y2", margin.top + plotH);
+    line.setAttribute("stroke", value === 60 ? "#8d7d6a" : "rgba(141, 125, 106, 0.35)");
+    line.setAttribute("stroke-width", value === 60 ? "1.2" : "0.7");
+    svg.appendChild(line);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", x);
+    label.setAttribute("y", margin.top + plotH + 18);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("fill", "#5f6a70");
+    label.setAttribute("font-size", "10");
+    label.textContent = value;
+    svg.appendChild(label);
+  }
+
+  sorted.forEach((item, index) => {
+    const y = margin.top + index * rowH;
+    const cy = y + rowH / 2;
+    const x0 = xScale(minScore);
+    const x1 = xScale(item.score);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", margin.left - 10);
+    label.setAttribute("y", cy + 4);
+    label.setAttribute("text-anchor", "end");
+    label.setAttribute("fill", "#182126");
+    label.setAttribute("font-size", "12");
+    label.setAttribute("font-weight", "700");
+    label.textContent = item.sector;
+    svg.appendChild(label);
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("class", "bar-rect");
+    rect.setAttribute("x", x0);
+    rect.setAttribute("y", cy - barH / 2);
+    rect.setAttribute("width", Math.max(x1 - x0, 2));
+    rect.setAttribute("height", barH);
+    rect.setAttribute("rx", 5);
+    rect.setAttribute("fill", scoreColor(item.score));
+    svg.appendChild(rect);
+
+    const value = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    value.setAttribute("x", x1 + 8);
+    value.setAttribute("y", cy + 4);
+    value.setAttribute("fill", scoreColor(item.score));
+    value.setAttribute("font-size", "11");
+    value.setAttribute("font-weight", "700");
+    value.textContent = item.score;
+    svg.appendChild(value);
+
+    rect.addEventListener("mouseenter", () => {
+      ttName.textContent = `${item.sector} | Score ${item.score}`;
+      ttVals.textContent = `${item.note} Expected 1M range: ${item.range}. Source breadth: ${item.breadth}.`;
+      tooltip.style.display = "block";
+    });
+    rect.addEventListener("mousemove", (event) => {
+      tooltip.style.left = `${event.clientX + 12}px`;
+      tooltip.style.top = `${event.clientY + 12}px`;
+    });
+    rect.addEventListener("mouseleave", () => {
+      tooltip.style.display = "none";
+    });
+  });
+}
+
+function renderScenarios() {
+  const scenarioHost = document.getElementById("scenarioList");
+  scenarios.forEach((item) => {
+    const node = document.createElement("article");
+    node.className = "scenario";
+    node.innerHTML = `
+      <div class="scenario-top">
+        <h3>${item.title}</h3>
+        <div class="scenario-prob">${item.probability}</div>
+      </div>
+      <p>${item.text}</p>
+    `;
+    scenarioHost.appendChild(node);
+  });
+
+  const triggerHost = document.getElementById("triggerList");
+  triggers.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "trigger";
+    row.innerHTML = `<strong>${item.label}</strong><span>${item.value}</span>`;
+    triggerHost.appendChild(row);
+  });
+}
+
+function renderSectorTable() {
+  const tbody = document.querySelector("#sectorTable tbody");
+  sectorData.forEach((item) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>${item.sector}</strong></td>
+      <td><span class="score-chip" style="background:${scoreColor(item.score)}">${item.score}</span></td>
+      <td><span class="view-chip ${viewClass(item.bias)}">${item.bias}</span></td>
+      <td>${item.range}</td>
+      <td>${item.breadth}</td>
+      <td class="small">${item.drivers}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function renderRegionTable() {
+  const tbody = document.querySelector("#regionTable tbody");
+  regionData.forEach((item) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>${item.region}</strong></td>
+      <td><span class="score-chip" style="background:${scoreColor(item.score)}">${item.score}</span></td>
+      <td><span class="view-chip ${viewClass(item.view)}">${item.view}</span></td>
+      <td>${item.range}</td>
+      <td>${item.breadth}</td>
+      <td class="small">${item.drivers}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function renderAssetTable() {
+  const tbody = document.querySelector("#assetTable tbody");
+  assetData.forEach((item) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>${item.asset}</strong></td>
+      <td><span class="score-chip" style="background:${scoreColor(item.score)}">${item.score}</span></td>
+      <td><span class="view-chip ${viewClass(item.view)}">${item.view}</span></td>
+      <td>${item.range}</td>
+      <td>${item.role}</td>
+      <td class="small">${item.drivers}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function renderSourceTable() {
+  const tbody = document.querySelector("#sourceTable tbody");
+  sourceData.forEach((item) => {
+    const equityColor = item.equity >= 0.5 ? "var(--green)" : item.equity >= 0 ? "var(--amber)" : "var(--red)";
+    const intlColor = item.international >= 0.25 ? "var(--green)" : item.international >= 0 ? "var(--amber)" : "var(--red)";
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>${item.source}</strong></td>
+      <td>${item.type}</td>
+      <td><span style="font-weight:700;color:${equityColor}">${item.equity > 0 ? "+" : ""}${item.equity.toFixed(1)}</span></td>
+      <td>${item.defensive}/100</td>
+      <td><span style="font-weight:700;color:${intlColor}">${item.international > 0 ? "+" : ""}${item.international.toFixed(1)}</span></td>
+      <td class="small">${item.method}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+renderKpis();
+renderChart();
+renderScenarios();
+renderSectorTable();
+renderRegionTable();
+renderAssetTable();
+renderSourceTable();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milk Comparison — Animal vs Plant-Based</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f1117;
+    --surface: #181b24;
+    --border:  #2a2e3a;
+    --fg:      #e4e6ed;
+    --fg-dim:  #8b90a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg); color: var(--fg);
+    min-height: 100vh; padding: 2rem;
+  }
+  .container { max-width: 98vw; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    color: #FDF6E3; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
+    position: relative; overflow-x: auto;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; font-size: .82rem;
+    white-space: nowrap;
+  }
+  thead th {
+    background: #1e2130; position: sticky; top: 0;
+    padding: .65rem .6rem; text-align: right;
+    border-bottom: 2px solid var(--border);
+    cursor: pointer; user-select: none;
+    color: var(--fg-dim); font-weight: 600; font-size: .72rem;
+    text-transform: uppercase; letter-spacing: .04em;
+    transition: color 0.15s;
+  }
+  thead th:hover { color: var(--fg); }
+  thead th:first-child { text-align: left; }
+  thead th .arrow { font-size: .65rem; margin-left: .2rem; opacity: 0.4; }
+  thead th.sorted .arrow { opacity: 1; color: oklch(0.6 0.15 143); }
+  thead th.sorted { color: var(--fg); }
+
+  tbody td {
+    padding: .55rem .6rem; text-align: right;
+    border-bottom: 1px solid #1e222e;
+  }
+  tbody td:first-child {
+    text-align: left; font-weight: 600; color: var(--fg);
+    position: sticky; left: 0; background: var(--surface); z-index: 1;
+  }
+  tbody td:nth-child(2) {
+    text-align: left; color: var(--fg-dim); font-size: .75rem;
+  }
+  tbody tr:hover td { background: #1c2035; }
+  tbody tr:hover td:first-child { background: #1c2035; }
+
+  .score-cell {
+    font-weight: 800; font-size: .95rem;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  .section-row td {
+    background: #141620 !important; padding: .45rem .6rem;
+    font-weight: 800; font-size: .72rem; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--fg-dim); border-bottom: 2px solid var(--border);
+    text-align: left !important;
+  }
+
+  .legend-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: .5rem; margin: 1rem 0 0; flex-wrap: wrap;
+  }
+  .legend-gradient {
+    width: 200px; height: 12px; border-radius: 4px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143));
+  }
+  .legend-label { font-size: .7rem; color: var(--fg-dim); font-weight: 500; }
+
+  .sources {
+    background: var(--surface);
+    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; }
+  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Milk Comparison — Animal vs Plant-Based</h1>
+    <p>10 key nutrients per 100 ml, normalized, sorted by composite nutrition score · RG palette (OKLCH)</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <div class="card">
+    <table id="milkTable">
+      <thead>
+        <tr id="headerRow"></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="legend-bar">
+      <span class="legend-label">Lower</span>
+      <div class="legend-gradient"></div>
+      <span class="legend-label">Higher</span>
+    </div>
+  </div>
+
+  <div class="sources">
+    <h3>Data Sources & Methodology</h3>
+    <ul>
+      <li><strong>USDA FoodData Central</strong> — cow, goat, sheep, buffalo milk.<br>
+        <a href="https://fdc.nal.usda.gov/" target="_blank">https://fdc.nal.usda.gov/</a></li>
+      <li><strong>FAO</strong> — Milk composition across species (Park & Haenlein, 2006; FAO Animal Production and Health Paper).<br>
+        <a href="https://www.fao.org/dairy-production-products/en/" target="_blank">fao.org</a></li>
+      <li><strong>NIH / PubMed</strong> — Equine, camelid, and donkey milk composition studies.</li>
+      <li><strong>Plant milks:</strong> USDA + manufacturer data (unsweetened, fortified variants). Actual values vary by brand.</li>
+    </ul>
+    <div class="note">
+      <strong>Nutrition Score formula:</strong> Composite of 10 sub-scores (each 0–100, then averaged).<br>
+      <strong>Positive:</strong> Protein, Calcium, Vitamin D, Vitamin B12, Potassium → higher = better.<br>
+      <strong>Moderate:</strong> Fat (optimal ~3–4 g), Calories (optimal ~50–65 kcal), Carbs (optimal ~4–5 g), Sugar (lower = better).<br>
+      <strong>Bonus:</strong> Lactose-free scores a small bonus for digestibility (relevant for ~70% of world population).<br>
+      All values per 100 ml. Animal milks are whole unless noted. Plant milks are unsweetened fortified.
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── COLUMN DEFINITIONS ───────────────────────────────────────────────
+const columns = [
+  {key:"name",   label:"Milk Type",    unit:"",     fmt:s=>s,              higherBetter:null,  sortable:false},
+  {key:"type",   label:"Category",     unit:"",     fmt:s=>s,              higherBetter:null,  sortable:false},
+  {key:"kcal",   label:"Energy",       unit:"kcal", fmt:v=>Math.round(v),  higherBetter:null},  // moderate
+  {key:"protein",label:"Protein",      unit:"g",    fmt:v=>v.toFixed(1),   higherBetter:true},
+  {key:"fat",    label:"Fat",          unit:"g",    fmt:v=>v.toFixed(1),   higherBetter:null},  // moderate
+  {key:"carbs",  label:"Carbs",        unit:"g",    fmt:v=>v.toFixed(1),   higherBetter:null},  // moderate
+  {key:"sugar",  label:"Sugar",        unit:"g",    fmt:v=>v.toFixed(1),   higherBetter:false},
+  {key:"calcium",label:"Calcium",      unit:"mg",   fmt:v=>Math.round(v),  higherBetter:true},
+  {key:"vitd",   label:"Vit D",        unit:"µg",   fmt:v=>v.toFixed(1),   higherBetter:true},
+  {key:"vitb12", label:"Vit B12",      unit:"µg",   fmt:v=>v.toFixed(2),   higherBetter:true},
+  {key:"potassium",label:"Potassium",  unit:"mg",   fmt:v=>Math.round(v),  higherBetter:true},
+  {key:"score",  label:"Nutrition Score",unit:"",    fmt:v=>v.toFixed(0),   higherBetter:true},
+];
+
+// ─── DATA (per 100 ml) ───────────────────────────────────────────────
+// Sources: USDA, FAO, PubMed reviews, manufacturer labels
+const data = [
+  // ── ANIMAL MILKS (whole) ──
+  //                            kcal  prot  fat   carbs sugar  Ca    VitD  B12    K     lactFree
+  {name:"Cow (Whole)",         type:"🐄 Animal", kcal:61,  protein:3.2, fat:3.3, carbs:4.8, sugar:5.1, calcium:120, vitd:1.3, vitb12:0.45, potassium:150, lactFree:false},
+  {name:"Goat",                type:"🐐 Animal", kcal:69,  protein:3.6, fat:4.1, carbs:4.5, sugar:4.5, calcium:134, vitd:0.7, vitb12:0.07, potassium:204, lactFree:false},
+  {name:"Sheep",               type:"🐑 Animal", kcal:108, protein:5.9, fat:7.0, carbs:5.4, sugar:5.4, calcium:193, vitd:0.2, vitb12:0.71, potassium:137, lactFree:false},
+  {name:"Buffalo",             type:"🐃 Animal", kcal:97,  protein:3.7, fat:6.9, carbs:5.2, sugar:5.2, calcium:169, vitd:0.5, vitb12:0.36, potassium:178, lactFree:false},
+  {name:"Yak",                 type:"🦬 Animal", kcal:130, protein:5.2, fat:7.5, carbs:5.0, sugar:5.0, calcium:210, vitd:0.3, vitb12:0.40, potassium:190, lactFree:false},
+  {name:"Camel",               type:"🐪 Animal", kcal:46,  protein:3.1, fat:2.0, carbs:4.4, sugar:4.4, calcium:114, vitd:0.5, vitb12:0.15, potassium:156, lactFree:false},
+  {name:"Horse (Mare)",        type:"🐴 Animal", kcal:48,  protein:2.2, fat:1.2, carbs:6.4, sugar:6.4, calcium:89,  vitd:0.3, vitb12:0.03, potassium:64,  lactFree:false},
+  {name:"Donkey",              type:"🫏 Animal", kcal:44,  protein:1.7, fat:1.0, carbs:6.9, sugar:6.9, calcium:68,  vitd:0.2, vitb12:0.02, potassium:50,  lactFree:false},
+  {name:"Llama",               type:"🦙 Animal", kcal:60,  protein:3.9, fat:3.2, carbs:5.6, sugar:5.6, calcium:130, vitd:0.3, vitb12:0.20, potassium:120, lactFree:false},
+  {name:"Reindeer",            type:"🦌 Animal", kcal:186, protein:10.3,fat:14.5,carbs:2.5, sugar:2.5, calcium:320, vitd:0.5, vitb12:0.80, potassium:220, lactFree:false},
+
+  // ── PLANT MILKS (unsweetened, fortified) ──
+  {name:"Soy Milk",            type:"🌱 Plant",  kcal:33,  protein:3.3, fat:1.8, carbs:1.2, sugar:0.4, calcium:120, vitd:1.1, vitb12:0.38, potassium:118, lactFree:true},
+  {name:"Oat Milk",            type:"🌾 Plant",  kcal:43,  protein:1.0, fat:1.5, carbs:6.5, sugar:3.2, calcium:120, vitd:1.1, vitb12:0.38, potassium:65,  lactFree:true},
+  {name:"Almond Milk",         type:"🌰 Plant",  kcal:15,  protein:0.6, fat:1.1, carbs:0.3, sugar:0.0, calcium:120, vitd:1.1, vitb12:0.38, potassium:67,  lactFree:true},
+  {name:"Coconut Milk",        type:"🥥 Plant",  kcal:19,  protein:0.2, fat:1.6, carbs:1.0, sugar:0.0, calcium:120, vitd:1.0, vitb12:0.38, potassium:46,  lactFree:true},
+  {name:"Rice Milk",           type:"🍚 Plant",  kcal:47,  protein:0.3, fat:1.0, carbs:9.2, sugar:5.3, calcium:118, vitd:1.0, vitb12:0.38, potassium:27,  lactFree:true},
+  {name:"Hemp Milk",           type:"🌿 Plant",  kcal:35,  protein:1.3, fat:2.5, carbs:1.5, sugar:0.0, calcium:120, vitd:1.1, vitb12:0.38, potassium:80,  lactFree:true},
+  {name:"Cashew Milk",         type:"🥜 Plant",  kcal:18,  protein:0.5, fat:1.2, carbs:1.0, sugar:0.0, calcium:120, vitd:1.1, vitb12:0.38, potassium:42,  lactFree:true},
+  {name:"Pea Milk",            type:"🫛 Plant",  kcal:35,  protein:3.3, fat:1.6, carbs:0.5, sugar:0.0, calcium:120, vitd:1.1, vitb12:0.38, potassium:105, lactFree:true},
+  {name:"Hazelnut Milk",       type:"🌰 Plant",  kcal:29,  protein:0.4, fat:1.6, carbs:3.0, sugar:1.0, calcium:118, vitd:1.0, vitb12:0.38, potassium:55,  lactFree:true},
+  {name:"Macadamia Milk",      type:"🌰 Plant",  kcal:21,  protein:0.2, fat:1.8, carbs:0.8, sugar:0.0, calcium:120, vitd:1.1, vitb12:0.38, potassium:38,  lactFree:true},
+];
+
+// ─── NUTRITION SCORE (0–100) ──────────────────────────────────────────
+function computeScore(d) {
+  const scores = [];
+  // 1. Protein (higher=better, 0→0, 10→100)
+  scores.push(Math.min(100, d.protein / 10 * 100));
+  // 2. Fat (moderate ~3–4g best)
+  scores.push(Math.max(0, 100 - Math.abs(d.fat - 3.5) * 15));
+  // 3. Calories (moderate ~50–65 best)
+  scores.push(Math.max(0, 100 - Math.abs(d.kcal - 55) * 1.2));
+  // 4. Carbs (moderate ~4–5g best)
+  scores.push(Math.max(0, 100 - Math.abs(d.carbs - 4.5) * 12));
+  // 5. Sugar (lower=better, 0→100, 7→0)
+  scores.push(Math.max(0, 100 - d.sugar / 7 * 100));
+  // 6. Calcium (higher=better, 0→0, 320→100)
+  scores.push(Math.min(100, d.calcium / 320 * 100));
+  // 7. Vitamin D (higher=better, 0→0, 1.5→100)
+  scores.push(Math.min(100, d.vitd / 1.5 * 100));
+  // 8. Vitamin B12 (higher=better, 0→0, 0.8→100)
+  scores.push(Math.min(100, d.vitb12 / 0.8 * 100));
+  // 9. Potassium (higher=better, 0→0, 250→100)
+  scores.push(Math.min(100, d.potassium / 250 * 100));
+  // 10. Lactose-free bonus (7 points — ~70% of adults are lactose intolerant)
+  scores.push(d.lactFree ? 70 : 50);
+
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+
+data.forEach(d => { d.score = computeScore(d); });
+
+// ─── RG PALETTE (OKLCH) ──────────────────────────────────────────────
+function scoreToColor(val, min, max) {
+  if (max === min) return "var(--fg-dim)";
+  let t = (val - min) / (max - min);
+  t = Math.max(0, Math.min(1, t));
+  let L, C, hue;
+  if (t <= 0.5) {
+    const s = t * 2;
+    L   = 0.50 + s * (0.97 - 0.50);
+    C   = 0.20 + s * (0.02 - 0.20);
+    hue = 25   + s * (95   - 25);
+  } else {
+    const s = (t - 0.5) * 2;
+    L   = 0.97 + s * (0.50 - 0.97);
+    C   = 0.02 + s * (0.20 - 0.02);
+    hue = 95   + s * (143  - 95);
+  }
+  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────
+let sortCol = "score";
+let sortAsc = false;
+
+function getRange(key) {
+  const vals = data.map(d => d[key]).filter(v => typeof v === 'number' && isFinite(v));
+  return { min: Math.min(...vals), max: Math.max(...vals) };
+}
+
+function renderHeaders() {
+  const row = document.getElementById("headerRow");
+  row.innerHTML = "";
+  columns.forEach(col => {
+    const th = document.createElement("th");
+    const isSorted = sortCol === col.key;
+    th.className = isSorted ? "sorted" : "";
+    const arrow = (col.sortable === false) ? "" :
+      `<span class="arrow">${isSorted ? (sortAsc ? "▲" : "▼") : "⇅"}</span>`;
+    th.innerHTML = `${col.label}${col.unit ? " <small>("+col.unit+")</small>" : ""} ${arrow}`;
+    if (col.sortable !== false) {
+      th.onclick = () => {
+        if (sortCol === col.key) sortAsc = !sortAsc;
+        else { sortCol = col.key; sortAsc = col.higherBetter === false; }
+        renderTable();
+      };
+    }
+    row.appendChild(th);
+  });
+}
+
+function renderTable() {
+  renderHeaders();
+  const sorted = [...data].sort((a, b) => {
+    const va = a[sortCol], vb = b[sortCol];
+    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = "";
+
+  sorted.forEach(d => {
+    const tr = document.createElement("tr");
+    columns.forEach(col => {
+      const td = document.createElement("td");
+      const val = d[col.key];
+      if (col.key === "name") {
+        td.textContent = val;
+      } else if (col.key === "type") {
+        td.textContent = val;
+      } else {
+        td.textContent = col.fmt(val);
+        const range = getRange(col.key);
+        if (col.key === "score") {
+          td.className = "score-cell";
+          td.style.color = scoreToColor(val, range.min, range.max);
+        } else if (col.key === "kcal") {
+          // Moderate: ~55 optimal
+          const dist = Math.abs(val - 55);
+          const maxDist = Math.max(Math.abs(range.max - 55), Math.abs(range.min - 55));
+          td.style.color = scoreToColor(dist, maxDist, 0);
+        } else if (col.key === "fat") {
+          // Moderate: ~3.5 optimal
+          const dist = Math.abs(val - 3.5);
+          const maxDist = Math.max(Math.abs(range.max - 3.5), Math.abs(range.min - 3.5));
+          td.style.color = scoreToColor(dist, maxDist, 0);
+        } else if (col.key === "carbs") {
+          // Moderate: ~4.5 optimal
+          const dist = Math.abs(val - 4.5);
+          const maxDist = Math.max(Math.abs(range.max - 4.5), Math.abs(range.min - 4.5));
+          td.style.color = scoreToColor(dist, maxDist, 0);
+        } else if (col.higherBetter === true) {
+          td.style.color = scoreToColor(val, range.min, range.max);
+        } else if (col.higherBetter === false) {
+          td.style.color = scoreToColor(val, range.max, range.min);
+        }
+        td.style.fontWeight = "600";
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+renderTable();
+</script>
+</body>
+</html>

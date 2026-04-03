@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GDP Per Capita · USA vs Europe · Quintile Comparison</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0f1117;
+    --surface:   #181b24;
+    --surface2:  #1f2330;
+    --border:    #2a2e3a;
+    --fg:        #e4e6ed;
+    --fg-dim:    #8b90a0;
+    --accent-us: #6c9fff;
+    --accent-eu: #ff8c6c;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 2.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--accent-us), var(--accent-eu));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; font-weight: 400; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent-us), var(--accent-eu));
+  }
+  .card h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 1.2rem; color: var(--fg); }
+
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-wrap.quintile { height: 440px; }
+  .chart-wrap.strip    { height: 360px; }
+
+  .legend-row {
+    display: flex; justify-content: center; gap: 2rem;
+    margin-bottom: 1.5rem; flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 500; }
+  .legend-dot  { width: 14px; height: 14px; border-radius: 4px; }
+  .legend-dot.us { background: var(--accent-us); }
+  .legend-dot.eu { background: var(--accent-eu); }
+
+
+
+  .sources {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem; margin-top: 2rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .5rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; color: var(--fg-dim); }
+  .sources a { color: var(--accent-us); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>GDP Per Capita · USA vs Europe</h1>
+    <p>Quintile comparison of US states and European countries, nominal USD</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <div class="legend-row">
+    <div class="legend-item"><div class="legend-dot us"></div> US States (2024)</div>
+    <div class="legend-item"><div class="legend-dot eu"></div> European Countries (2025 IMF)</div>
+  </div>
+
+  <!-- Quintile bar chart -->
+  <div class="card">
+    <h1>Quintile Comparison (Q0 = Min, Q1 = P20, Q2 = P40, Q3 = P60, Q4 = P80, Q5 = Max)</h1>
+    <div class="chart-wrap quintile"><canvas id="quintileChart"></canvas></div>
+  </div>
+
+  <!-- Distribution strip chart -->
+  <div class="card">
+    <h1>Full Distribution</h1>
+    <div class="chart-wrap strip"><canvas id="stripChart"></canvas></div>
+  </div>
+
+
+  <!-- Sources -->
+  <div class="sources">
+    <h3>Data Sources</h3>
+    <ul>
+      <li><strong>US States GDP per capita (2024)</strong> — U.S. Bureau of Economic Analysis (BEA), GDP by State.<br>
+        <a href="https://www.bea.gov/data/gdp/gdp-state" target="_blank">https://www.bea.gov/data/gdp/gdp-state</a></li>
+      <li><strong>European countries GDP per capita (2025)</strong> — IMF World Economic Outlook Database, October 2025.<br>
+        <a href="https://www.imf.org/en/Publications/WEO/weo-database/2025/October" target="_blank">https://www.imf.org/en/Publications/WEO/weo-database/2025/October</a></li>
+      <li><strong>US state population</strong> — U.S. Census Bureau, Annual Population Estimates.<br>
+        <a href="https://www.census.gov/data/tables/time-series/demo/popest/2020s-state-total.html" target="_blank">https://www.census.gov/data/tables/time-series/demo/popest/2020s-state-total.html</a></li>
+    </ul>
+    <div class="note">
+      GDP per capita = nominal GDP / population, in current US dollars. DC excluded from US states.
+      Luxembourg & Ireland excluded from European quintile calculation as extreme outliers ($135k–$154k) but shown in distribution.
+      European set includes EU-27 + UK, Norway, Switzerland, Iceland.
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── DATA ──────────────────────────────────────────────────────────────
+const usStates = [
+  {name:"New York",          v:111000},
+  {name:"Massachusetts",     v:105000},
+  {name:"Washington",        v:103000},
+  {name:"California",        v: 99000},
+  {name:"North Dakota",      v: 97000},
+  {name:"Connecticut",       v: 96000},
+  {name:"Delaware",          v: 95000},
+  {name:"Alaska",            v: 93000},
+  {name:"Nebraska",          v: 92000},
+  {name:"Colorado",          v: 90000},
+  {name:"Wyoming",           v: 88000},
+  {name:"Illinois",          v: 87000},
+  {name:"New Jersey",        v: 86000},
+  {name:"Minnesota",         v: 82000},
+  {name:"Texas",             v: 81000},
+  {name:"Oregon",            v: 79000},
+  {name:"Iowa",              v: 78000},
+  {name:"South Dakota",      v: 77000},
+  {name:"Maryland",          v: 76000},
+  {name:"Virginia",          v: 75000},
+  {name:"Pennsylvania",      v: 74000},
+  {name:"New Hampshire",     v: 73000},
+  {name:"Hawaii",            v: 73000},
+  {name:"Indiana",           v: 72000},
+  {name:"Wisconsin",         v: 71000},
+  {name:"Ohio",              v: 70000},
+  {name:"Kansas",            v: 69000},
+  {name:"Rhode Island",      v: 68000},
+  {name:"Georgia",           v: 68000},
+  {name:"Tennessee",         v: 68000},
+  {name:"Utah",              v: 67000},
+  {name:"Florida",           v: 67000},
+  {name:"North Carolina",    v: 66000},
+  {name:"Michigan",          v: 65000},
+  {name:"Missouri",          v: 64000},
+  {name:"Montana",           v: 63000},
+  {name:"Maine",             v: 63000},
+  {name:"Nevada",            v: 62000},
+  {name:"Arizona",           v: 62000},
+  {name:"Vermont",           v: 62000},
+  {name:"Louisiana",         v: 62000},
+  {name:"Oklahoma",          v: 61000},
+  {name:"West Virginia",     v: 61000},
+  {name:"New Mexico",        v: 60000},
+  {name:"Arkansas",          v: 60000},
+  {name:"Idaho",             v: 58000},
+  {name:"South Carolina",    v: 57000},
+  {name:"Kentucky",          v: 56000},
+  {name:"Alabama",           v: 55000},
+  {name:"Mississippi",       v: 53000},
+].sort((a,b) => a.v - b.v);
+
+const euCountries = [
+  {name:"Luxembourg",    v:154120},
+  {name:"Ireland",        v:135250},
+  {name:"Switzerland",    v: 99990},
+  {name:"Norway",         v: 94600},
+  {name:"Iceland",        v: 84340},
+  {name:"Denmark",        v: 82710},
+  {name:"Netherlands",    v: 77880},
+  {name:"Sweden",         v: 66120},
+  {name:"Austria",        v: 65640},
+  {name:"Belgium",        v: 63900},
+  {name:"Germany",        v: 63600},
+  {name:"United Kingdom", v: 60010},
+  {name:"Finland",        v: 59750},
+  {name:"France",         v: 52000},
+  {name:"Malta",          v: 53080},
+  {name:"Italy",          v: 45880},
+  {name:"Cyprus",         v: 45600},
+  {name:"Spain",          v: 40580},
+  {name:"Slovenia",       v: 40160},
+  {name:"Czech Republic", v: 38370},
+  {name:"Estonia",        v: 37190},
+  {name:"Lithuania",      v: 36230},
+  {name:"Portugal",       v: 33970},
+  {name:"Slovak Republic",v: 31030},
+  {name:"Poland",         v: 30650},
+  {name:"Greece",         v: 29410},
+  {name:"Croatia",        v: 29370},
+  {name:"Hungary",        v: 28300},
+  {name:"Latvia",         v: 28020},
+  {name:"Romania",        v: 23770},
+].sort((a,b) => a.v - b.v);
+
+// Exclude Luxembourg & Ireland from quintile calc (extreme outliers)
+const euForQuintiles = euCountries.filter(c => c.name !== "Luxembourg" && c.name !== "Ireland");
+
+// ─── QUINTILE HELPER ───────────────────────────────────────────────────
+function quantile(arr, q) {
+  const sorted = [...arr].sort((a,b) => a - b);
+  if (q === 0) return sorted[0];
+  if (q === 1) return sorted[sorted.length - 1];
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  const frac = pos - lo;
+  return sorted[lo] * (1 - frac) + sorted[hi] * frac;
+}
+
+function computeQuintiles(data) {
+  const vals = data.map(d => d.v);
+  return {
+    q0: quantile(vals, 0),
+    q1: quantile(vals, 0.2),
+    q2: quantile(vals, 0.4),
+    q3: quantile(vals, 0.6),
+    q4: quantile(vals, 0.8),
+    q5: quantile(vals, 1),
+    mean: vals.reduce((a,b)=>a+b,0)/vals.length,
+  };
+}
+
+// Also find which entity sits at each quintile boundary
+function entityAtQuantile(data, q) {
+  const sorted = [...data].sort((a,b) => a.v - b.v);
+  const idx = Math.round((sorted.length - 1) * q);
+  return sorted[idx].name;
+}
+
+const usQ  = computeQuintiles(usStates);
+const euQ  = computeQuintiles(euForQuintiles);
+
+// ─── CHART DEFAULTS ────────────────────────────────────────────────────
+Chart.defaults.color = '#8b90a0';
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.font.size = 12;
+
+const usColor   = 'rgba(108,159,255,0.85)';
+const euColor   = 'rgba(255,140,108,0.85)';
+const usBorder  = '#6c9fff';
+const euBorder  = '#ff8c6c';
+
+// ─── QUINTILE BAR CHART ────────────────────────────────────────────────
+const qLabels = ['Q0 (Min)','Q1 (P20)','Q2 (P40)','Q3 (P60)','Q4 (P80)','Q5 (Max)'];
+const usVals  = [usQ.q0, usQ.q1, usQ.q2, usQ.q3, usQ.q4, usQ.q5];
+const euVals  = [euQ.q0, euQ.q1, euQ.q2, euQ.q3, euQ.q4, euQ.q5];
+
+// Entity names at each quintile for tooltips
+const usNames = [0,0.2,0.4,0.6,0.8,1].map(q => entityAtQuantile(usStates, q));
+const euNames = [0,0.2,0.4,0.6,0.8,1].map(q => entityAtQuantile(euForQuintiles, q));
+
+new Chart(document.getElementById('quintileChart'), {
+  type: 'bar',
+  data: {
+    labels: qLabels,
+    datasets: [
+      {
+        label: 'US States',
+        data: usVals,
+        backgroundColor: usColor,
+        borderColor: usBorder,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        borderSkipped: false,
+        entityNames: usNames,
+      },
+      {
+        label: 'European Countries',
+        data: euVals,
+        backgroundColor: euColor,
+        borderColor: euBorder,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        borderSkipped: false,
+        entityNames: euNames,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 1200, easing: 'easeOutQuart' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1f2330',
+        borderColor: '#2a2e3a',
+        borderWidth: 1,
+        titleFont: { weight: '600' },
+        callbacks: {
+          label: ctx => {
+            const names = ctx.dataset.entityNames;
+            const name = names ? names[ctx.dataIndex] : '';
+            return `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString()}  (≈ ${name})`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: { font: { weight: '600', size: 12 } },
+      },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.06)' },
+        ticks: {
+          callback: v => '$' + (v/1000).toFixed(0) + 'k',
+          font: { size: 11 }
+        },
+        beginAtZero: true,
+      }
+    }
+  }
+});
+
+// ─── STRIP / BEE-SWARM CHART ──────────────────────────────────────────
+const usPoints = usStates.map((d,i) => ({ x: d.v, y: 1 + (i % 5) * 0.12 - 0.24, name: d.name }));
+const euPoints = euCountries.map((d,i) => ({ x: d.v, y: 2 + (i % 5) * 0.12 - 0.24, name: d.name }));
+
+new Chart(document.getElementById('stripChart'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: 'US States',
+        data: usPoints,
+        backgroundColor: 'rgba(108,159,255,0.7)',
+        borderColor: '#6c9fff',
+        borderWidth: 1,
+        pointRadius: 6,
+        pointHoverRadius: 9,
+      },
+      {
+        label: 'European Countries',
+        data: euPoints,
+        backgroundColor: 'rgba(255,140,108,0.7)',
+        borderColor: '#ff8c6c',
+        borderWidth: 1,
+        pointRadius: 6,
+        pointHoverRadius: 9,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 1400, easing: 'easeOutQuart' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1f2330',
+        borderColor: '#2a2e3a',
+        borderWidth: 1,
+        callbacks: {
+          title: () => '',
+          label: ctx => `${ctx.raw.name}: $${ctx.raw.x.toLocaleString()}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'GDP per Capita (USD)', font: { size: 12, weight: '500' } },
+        grid: { color: 'rgba(255,255,255,0.06)' },
+        ticks: {
+          callback: v => '$' + (v/1000).toFixed(0) + 'k',
+          font: { size: 11 },
+        },
+        min: 15000,
+        max: 165000,
+      },
+      y: {
+        grid: { display: false },
+        ticks: {
+          callback: function(v) {
+            if (Math.abs(v - 1) < 0.01) return 'US States';
+            if (Math.abs(v - 2) < 0.01) return 'Europe';
+            return '';
+          },
+          font: { size: 13, weight: '600' },
+          stepSize: 1,
+        },
+        min: 0.3,
+        max: 2.7,
+      }
+    }
+  }
+});
+
+
+</script>
+</body>
+</html>

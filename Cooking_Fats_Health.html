@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cooking Fats & Oils — Health Quality Comparison</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f1117;
+    --surface: #181b24;
+    --border:  #2a2e3a;
+    --fg:      #e4e6ed;
+    --fg-dim:  #8b90a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg); color: var(--fg);
+    min-height: 100vh; padding: 2rem;
+  }
+  .container { max-width: 98vw; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    color: #FDF6E3; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
+    position: relative; overflow-x: auto;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; font-size: .82rem;
+    white-space: nowrap;
+  }
+  thead th {
+    background: #1e2130; position: sticky; top: 0;
+    padding: .65rem .6rem; text-align: right;
+    border-bottom: 2px solid var(--border);
+    cursor: pointer; user-select: none;
+    color: var(--fg-dim); font-weight: 600; font-size: .72rem;
+    text-transform: uppercase; letter-spacing: .04em;
+    transition: color 0.15s;
+  }
+  thead th:hover { color: var(--fg); }
+  thead th:first-child { text-align: left; }
+  thead th .arrow { font-size: .65rem; margin-left: .2rem; opacity: 0.4; }
+  thead th.sorted .arrow { opacity: 1; color: oklch(0.6 0.15 143); }
+  thead th.sorted { color: var(--fg); }
+
+  tbody td {
+    padding: .55rem .6rem; text-align: right;
+    border-bottom: 1px solid #1e222e;
+  }
+  tbody td:first-child {
+    text-align: left; font-weight: 600; color: var(--fg);
+    position: sticky; left: 0; background: var(--surface);
+  }
+  tbody tr:hover td { background: #1c2035; }
+  tbody tr:hover td:first-child { background: #1c2035; }
+
+  .bar-cell {
+    position: relative; min-width: 60px;
+  }
+  .bar-bg {
+    position: absolute; top: 2px; bottom: 2px; left: 0;
+    border-radius: 3px; opacity: 0.25;
+  }
+  .bar-val { position: relative; z-index: 1; }
+
+  .score-cell {
+    font-weight: 800; font-size: .95rem;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  .legend-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: .5rem; margin: 1rem 0 0; flex-wrap: wrap;
+  }
+  .legend-gradient {
+    width: 200px; height: 12px; border-radius: 4px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143));
+  }
+  .legend-label { font-size: .7rem; color: var(--fg-dim); font-weight: 500; }
+
+  .sources {
+    background: var(--surface);
+    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; }
+  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Cooking Fats & Oils — Health Quality</h1>
+    <p>10 key components per 100 g, normalized, sorted by composite health score · RG palette (OKLCH)</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <div class="card">
+    <table id="fatTable">
+      <thead>
+        <tr id="headerRow"></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="legend-bar">
+      <span class="legend-label">Worse</span>
+      <div class="legend-gradient"></div>
+      <span class="legend-label">Better</span>
+    </div>
+  </div>
+
+  <div class="sources">
+    <h3>Data Sources & Methodology</h3>
+    <ul>
+      <li><strong>USDA FoodData Central</strong> — nutritional composition per 100 g.<br>
+        <a href="https://fdc.nal.usda.gov/" target="_blank">https://fdc.nal.usda.gov/</a></li>
+      <li><strong>Smoke points:</strong> The Culinary Institute of America / Serious Eats / Wikipedia compilations.</li>
+      <li><strong>Oxidative stability:</strong> Rancimat induction times from peer-reviewed lipid chemistry literature.</li>
+    </ul>
+    <div class="note">
+      <strong>Health Score formula:</strong> Composite of 10 sub-scores (each 0–100, then averaged):<br>
+      <strong>Positive:</strong> MUFA%, Omega-3, Vitamin E, Smoke Point, Oxidative Stability →
+      higher = better.<br>
+      <strong>Negative:</strong> SFA%, Trans Fat, Omega-6:3 Ratio →
+      lower = better.<br>
+      <strong>Moderate:</strong> PUFA% → optimal ~15–25%, penalised if too high (oxidation risk) or too low.<br>
+      The score is opinionated and reflects a Mediterranean-diet-aligned perspective favouring
+      MUFA-rich, high-stability fats with low omega-6:3 ratios. Individual health needs may vary.
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA (per 100 g, USDA + literature) ──────────────────────────────
+// Columns: SFA, MUFA, PUFA, ω6, ω3, ω6:ω3, TransFat, VitE, SmokePoint°C, OxStability(h)
+const columns = [
+  {key:"name",    label:"Fat / Oil",       unit:"",   fmt:s=>s, higherBetter:null},
+  {key:"sfa",     label:"SFA",             unit:"g",  fmt:v=>v.toFixed(1), higherBetter:false},
+  {key:"mufa",    label:"MUFA",            unit:"g",  fmt:v=>v.toFixed(1), higherBetter:true},
+  {key:"pufa",    label:"PUFA",            unit:"g",  fmt:v=>v.toFixed(1), higherBetter:null},  // moderate best
+  {key:"omega6",  label:"ω-6",             unit:"g",  fmt:v=>v.toFixed(1), higherBetter:false},
+  {key:"omega3",  label:"ω-3",             unit:"g",  fmt:v=>v.toFixed(2), higherBetter:true},
+  {key:"ratio",   label:"ω6:ω3",           unit:"",   fmt:v=>v.toFixed(1), higherBetter:false},
+  {key:"trans",   label:"Trans",           unit:"g",  fmt:v=>v.toFixed(2), higherBetter:false},
+  {key:"vite",    label:"Vit E",           unit:"mg", fmt:v=>v.toFixed(1), higherBetter:true},
+  {key:"smoke",   label:"Smoke Pt",        unit:"°C", fmt:v=>Math.round(v), higherBetter:true},
+  {key:"oxstab",  label:"Ox Stability",    unit:"h",  fmt:v=>v.toFixed(1), higherBetter:true},
+  {key:"score",   label:"Health Score",    unit:"",   fmt:v=>v.toFixed(0), higherBetter:true},
+];
+
+const data = [
+  // name,                  SFA,  MUFA, PUFA, ω6,   ω3,    ω6:ω3, Trans, VitE, Smoke°C, OxStab(h)
+  {name:"Extra Virgin Olive",sfa:13.8,mufa:73.0,pufa:10.5,omega6:9.8,  omega3:0.76, ratio:12.9, trans:0.00, vite:14.4, smoke:190, oxstab:14.0},
+  {name:"Avocado Oil",       sfa:11.6,mufa:70.6,pufa:13.5,omega6:12.5, omega3:0.96, ratio:13.0, trans:0.00, vite:12.0, smoke:271, oxstab:12.0},
+  {name:"Coconut Oil",       sfa:82.5,mufa:6.3, pufa:1.7, omega6:1.7,  omega3:0.02, ratio:85.0, trans:0.00, vite:0.1,  smoke:232, oxstab:36.0},
+  {name:"Butter",            sfa:51.4,mufa:21.0,pufa:3.0, omega6:2.2,  omega3:0.32, ratio:6.9,  trans:3.28, vite:2.3,  smoke:150, oxstab:4.0},
+  {name:"Ghee",              sfa:61.9,mufa:28.7,pufa:3.7, omega6:2.8,  omega3:0.47, ratio:6.0,  trans:2.50, vite:2.8,  smoke:252, oxstab:9.0},
+  {name:"Lard",              sfa:39.2,mufa:45.1,pufa:11.2,omega6:10.2, omega3:1.00, ratio:10.2, trans:0.10, vite:0.6,  smoke:190, oxstab:8.0},
+  {name:"Tallow (Beef)",     sfa:49.8,mufa:41.8,pufa:4.0, omega6:3.1,  omega3:0.60, ratio:5.2,  trans:2.60, vite:2.7,  smoke:250, oxstab:20.0},
+  {name:"Duck Fat",          sfa:33.2,mufa:49.3,pufa:12.9,omega6:12.0, omega3:0.90, ratio:13.3, trans:0.00, vite:2.7,  smoke:190, oxstab:10.0},
+  {name:"Sunflower (Hi-Ol)", sfa:9.7, mufa:83.7,pufa:3.8, omega6:3.6,  omega3:0.20, ratio:18.0, trans:0.00, vite:41.1, smoke:232, oxstab:25.0},
+  {name:"Sunflower (Hi-Lin)",sfa:10.3,mufa:19.5,pufa:65.7,omega6:65.0, omega3:0.20, ratio:325,  trans:0.00, vite:41.1, smoke:227, oxstab:3.5},
+  {name:"Canola Oil",        sfa:7.4, mufa:63.3,pufa:28.1,omega6:18.6, omega3:9.14, ratio:2.0,  trans:0.04, vite:17.5, smoke:204, oxstab:7.0},
+  {name:"Soybean Oil",       sfa:15.7,mufa:22.8,pufa:57.7,omega6:50.4, omega3:6.79, ratio:7.4,  trans:0.53, vite:8.2,  smoke:234, oxstab:5.0},
+  {name:"Corn Oil",          sfa:12.9,mufa:27.6,pufa:54.7,omega6:53.5, omega3:1.16, ratio:46.1, trans:0.06, vite:14.8, smoke:232, oxstab:5.0},
+  {name:"Peanut Oil",        sfa:16.9,mufa:46.2,pufa:32.0,omega6:32.0, omega3:0.00, ratio:999,  trans:0.00, vite:15.7, smoke:232, oxstab:8.0},
+  {name:"Sesame Oil",        sfa:14.2,mufa:39.7,pufa:41.7,omega6:41.3, omega3:0.30, ratio:137.7,trans:0.00, vite:1.4,  smoke:210, oxstab:6.0},
+  {name:"Walnut Oil",        sfa:9.1, mufa:22.8,pufa:63.3,omega6:52.9, omega3:10.4, ratio:5.1,  trans:0.00, vite:0.4,  smoke:160, oxstab:2.5},
+  {name:"Flaxseed Oil",      sfa:9.4, mufa:18.4,pufa:67.8,omega6:12.7, omega3:53.4, ratio:0.24, trans:0.00, vite:0.5,  smoke:107, oxstab:1.5},
+  {name:"Grapeseed Oil",     sfa:9.6, mufa:16.1,pufa:69.9,omega6:69.6, omega3:0.10, ratio:696,  trans:0.00, vite:28.8, smoke:216, oxstab:3.0},
+  {name:"Rice Bran Oil",     sfa:19.7,mufa:39.3,pufa:35.0,omega6:33.4, omega3:1.60, ratio:20.9, trans:0.00, vite:32.3, smoke:254, oxstab:9.0},
+  {name:"Palm Oil",          sfa:49.3,mufa:37.0,pufa:9.3, omega6:9.1,  omega3:0.20, ratio:45.5, trans:0.00, vite:15.9, smoke:235, oxstab:22.0},
+  {name:"MCT Oil",           sfa:97.0,mufa:0.0, pufa:0.0, omega6:0.0,  omega3:0.00, ratio:0,    trans:0.00, vite:0.0,  smoke:160, oxstab:40.0},
+  {name:"Almond Oil",        sfa:8.2, mufa:69.9,pufa:17.4,omega6:17.4, omega3:0.00, ratio:999,  trans:0.00, vite:39.2, smoke:216, oxstab:7.0},
+  {name:"Macadamia Oil",     sfa:15.0,mufa:78.0,pufa:3.0, omega6:2.6,  omega3:0.00, ratio:999,  trans:0.00, vite:1.5,  smoke:210, oxstab:15.0},
+];
+
+// ─── HEALTH SCORE (0–100) ─────────────────────────────────────────────
+// Weights and scoring for each component
+function computeScore(d) {
+  const scores = [];
+  // 1. SFA — lower is better (0–100 scale: 0g→100, 100g→0)
+  scores.push(Math.max(0, 100 - d.sfa));
+  // 2. MUFA — higher is better (0g→0, 85g→100)
+  scores.push(Math.min(100, d.mufa / 85 * 100));
+  // 3. PUFA — moderate is best (~20% optimal, penalise >40% heavily)
+  const pufaOpt = 20;
+  scores.push(Math.max(0, 100 - Math.abs(d.pufa - pufaOpt) * 2.5));
+  // 4. Omega-6 — lower is better (0→100, 70→0)
+  scores.push(Math.max(0, 100 - d.omega6 / 70 * 100));
+  // 5. Omega-3 — higher is better (0→0, 10→100, cap at 100)
+  scores.push(Math.min(100, d.omega3 / 10 * 100));
+  // 6. ω6:ω3 ratio — lower is better (1→100, 20→0). Cap ridiculous ratios.
+  const ratioVal = Math.min(d.ratio, 100);
+  scores.push(Math.max(0, 100 - ratioVal * 5));
+  // 7. Trans fat — lower is better (0→100, 3.5→0)
+  scores.push(Math.max(0, 100 - d.trans / 3.5 * 100));
+  // 8. Vitamin E — higher is better (0→0, 40→100)
+  scores.push(Math.min(100, d.vite / 40 * 100));
+  // 9. Smoke point — higher is better (100°C→0, 280°C→100)
+  scores.push(Math.max(0, Math.min(100, (d.smoke - 100) / 180 * 100)));
+  // 10. Oxidative stability — higher is better (0h→0, 40h→100)
+  scores.push(Math.min(100, d.oxstab / 40 * 100));
+
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+
+data.forEach(d => { d.score = computeScore(d); });
+
+// ─── RG PALETTE ───────────────────────────────────────────────────────
+function scoreToColor(score, min, max) {
+  let t = (score - min) / (max - min);
+  t = Math.max(0, Math.min(1, t));
+  let L, C, hue;
+  if (t <= 0.5) {
+    const s = t * 2;
+    L   = 0.50 + s * (0.97 - 0.50);
+    C   = 0.20 + s * (0.02 - 0.20);
+    hue = 25   + s * (95   - 25);
+  } else {
+    const s = (t - 0.5) * 2;
+    L   = 0.97 + s * (0.50 - 0.97);
+    C   = 0.02 + s * (0.20 - 0.02);
+    hue = 95   + s * (143  - 95);
+  }
+  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
+}
+
+// ─── RENDER TABLE ─────────────────────────────────────────────────────
+let sortCol = "score";
+let sortAsc = false;
+
+function getRange(key) {
+  const vals = data.map(d => d[key]).filter(v => typeof v === 'number' && isFinite(v));
+  return { min: Math.min(...vals), max: Math.max(...vals) };
+}
+
+function renderHeaders() {
+  const row = document.getElementById("headerRow");
+  row.innerHTML = "";
+  columns.forEach(col => {
+    const th = document.createElement("th");
+    const isSorted = sortCol === col.key;
+    th.className = isSorted ? "sorted" : "";
+    const arrow = col.key === "name" ? "" :
+      `<span class="arrow">${isSorted ? (sortAsc ? "▲" : "▼") : "⇅"}</span>`;
+    th.innerHTML = `${col.label}${col.unit ? " <small>("+col.unit+")</small>" : ""} ${arrow}`;
+    th.onclick = () => {
+      if (col.key === "name") return;
+      if (sortCol === col.key) sortAsc = !sortAsc;
+      else { sortCol = col.key; sortAsc = col.higherBetter === false; }
+      renderTable();
+    };
+    row.appendChild(th);
+  });
+}
+
+function renderTable() {
+  renderHeaders();
+  const sorted = [...data].sort((a, b) => {
+    const va = a[sortCol], vb = b[sortCol];
+    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = "";
+
+  sorted.forEach(d => {
+    const tr = document.createElement("tr");
+    columns.forEach(col => {
+      const td = document.createElement("td");
+      const val = d[col.key];
+      if (col.key === "name") {
+        td.textContent = val;
+      } else {
+        const range = getRange(col.key);
+        // Display value
+        if (col.key === "ratio") {
+          td.textContent = val >= 500 ? "∞" : col.fmt(val);
+        } else {
+          td.textContent = col.fmt(val);
+        }
+        // Color by health direction using RG palette
+        if (col.key === "score") {
+          td.className = "score-cell";
+          td.style.color = scoreToColor(val, range.min, range.max);
+        } else if (col.key === "pufa") {
+          // PUFA: moderate is best (~20g optimal)
+          const optDist = Math.abs(val - 20);
+          const maxDist = Math.max(Math.abs(range.max - 20), Math.abs(range.min - 20));
+          td.style.color = scoreToColor(optDist, maxDist, 0);  // closer to 0 dist = greener
+        } else if (col.key === "ratio") {
+          // Ratio: cap at 100 for color, lower is better
+          const capped = Math.min(val, 100);
+          td.style.color = scoreToColor(capped, 100, 0);
+        } else if (col.higherBetter === true) {
+          td.style.color = scoreToColor(val, range.min, range.max);
+        } else if (col.higherBetter === false) {
+          td.style.color = scoreToColor(val, range.max, range.min);  // reversed
+        }
+        td.style.fontWeight = "600";
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+renderTable();
+</script>
+</body>
+</html>

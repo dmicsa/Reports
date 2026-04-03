@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>US vs EU Reciprocal Tariffs by Product</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f1117;
+    --surface: #181b24;
+    --border:  #2a2e3a;
+    --fg:      #e4e6ed;
+    --fg-dim:  #8b90a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg); color: var(--fg);
+    min-height: 100vh; padding: 2rem;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    color: #FDF6E3; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 16px; padding: 1.5rem 1.5rem 1rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
+  }
+  .card h2 {
+    font-size: 1rem; font-weight: 700; margin-bottom: .6rem; color: var(--fg);
+  }
+  .card .subtitle {
+    font-size: .78rem; color: var(--fg-dim); margin-bottom: 1.2rem; line-height: 1.5;
+  }
+
+  .legend {
+    display: flex; gap: 1.5rem; justify-content: center;
+    margin-bottom: 1.2rem; flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .8rem; color: var(--fg-dim);
+  }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+  .chart-container { width: 100%; overflow-x: auto; }
+
+  svg text { font-family: 'Inter', sans-serif; }
+  svg .bar-rect { cursor: pointer; transition: opacity 0.12s; }
+  svg .bar-rect:hover { opacity: 0.75; }
+
+  .tooltip-chart {
+    position: fixed; pointer-events: none; z-index: 100;
+    background: #1f2330ee; border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem .9rem;
+    font-size: .82rem; display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    max-width: 320px; line-height: 1.5;
+  }
+  .tooltip-chart .tt-name { font-weight: 700; margin-bottom: .2rem; }
+  .tooltip-chart .tt-vals { font-size: .78rem; color: var(--fg-dim); }
+
+  .sources {
+    background: var(--surface);
+    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; }
+  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>US ↔ EU Reciprocal Tariffs by Product</h1>
+    <p>Effective rates as of February 2026, post-Supreme Court IEEPA ruling & US-EU Framework Agreement</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <!-- CHART 1: Current effective rates (Feb 2026) -->
+  <div class="card">
+    <h2>Current Effective Tariff Rates — US on EU imports vs EU on US imports</h2>
+    <div class="subtitle">
+      Post-Supreme Court IEEPA ruling (Feb 20, 2026) + US-EU Framework Agreement (Sept 2025).
+      Section 232 tariffs on steel/aluminum remain. IEEPA tariffs struck down.
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.55 0.18 25)"></div>
+        <span>🇺🇸 US tariff on EU goods</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.55 0.15 230)"></div>
+        <span>🇪🇺 EU tariff on US goods</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <svg id="chart1"></svg>
+    </div>
+  </div>
+
+  <!-- CHART 2: Pre-agreement MFN rates -->
+  <div class="card">
+    <h2>WTO MFN Baseline Rates (pre-2025, for reference)</h2>
+    <div class="subtitle">
+      Most Favored Nation rates before the 2025 tariff escalation. These were the standard rates applied.
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.55 0.18 25)"></div>
+        <span>🇺🇸 US MFN rate</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.55 0.15 230)"></div>
+        <span>🇪🇺 EU MFN rate</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <svg id="chart2"></svg>
+    </div>
+  </div>
+
+  <div class="sources">
+    <h3>Data Sources & Context</h3>
+    <ul>
+      <li><strong>US-EU Framework Agreement</strong> (September 2025) — European Commission & USTR joint text.<br>
+        <a href="https://policy.trade.ec.europa.eu/" target="_blank">EC Trade Policy</a> ·
+        <a href="https://ustr.gov/" target="_blank">USTR</a></li>
+      <li><strong>Section 232 tariffs</strong> — Steel 50%, Aluminum 50% (doubled June 2025). Remain in effect post-IEEPA ruling.<br>
+        <a href="https://www.whitehouse.gov/" target="_blank">White House proclamations</a></li>
+      <li><strong>US Supreme Court IEEPA ruling</strong> (Feb 20, 2026) — Invalidated IEEPA-based tariffs.<br>
+        <a href="https://www.supremecourt.gov/" target="_blank">supremecourt.gov</a></li>
+      <li><strong>WTO Tariff Profiles</strong> — MFN applied rates by HS chapter.<br>
+        <a href="https://www.wto.org/english/res_e/statis_e/statis_e.htm" target="_blank">WTO Statistics</a></li>
+      <li><strong>Tax Foundation / Yale Budget Lab</strong> — Analysis of effective US tariff rates 2025–2026.<br>
+        <a href="https://taxfoundation.org/" target="_blank">taxfoundation.org</a> ·
+        <a href="https://budgetlab.yale.edu/" target="_blank">Yale Budget Lab</a></li>
+    </ul>
+    <div class="note">
+      <strong>Note:</strong> Tariff rates shown are weighted averages or representative rates for each product category.
+      Actual rates vary by specific HS code / tariff line. "EU on US" includes the EU's retaliatory tariffs where applicable.
+      The EU committed to eliminating tariffs on all US industrial goods under the Framework Agreement, pending EU legislation.
+      Numbers may change as the Supreme Court ruling's implementation develops.
+    </div>
+  </div>
+</div>
+
+<div class="tooltip-chart" id="tooltip">
+  <div class="tt-name" id="ttName"></div>
+  <div class="tt-vals" id="ttVals"></div>
+</div>
+
+<script>
+// ─── TARIFF DATA ─────────────────────────────────────────────────────
+// Current effective rates as of Feb 2026 (post-IEEPA ruling + Framework Agreement)
+const currentTariffs = [
+  {product:"Steel",                  usOnEU:50,  euOnUS:25,  note:"Section 232 (doubled Jun 2025). EU retaliatory 25%."},
+  {product:"Aluminum",               usOnEU:50,  euOnUS:25,  note:"Section 232 (doubled Jun 2025). EU retaliatory 25%."},
+  {product:"Automobiles",            usOnEU:15,  euOnUS:10,  note:"Reduced from 27.5% to 15% under Framework. EU MFN 10%, moving to 0%."},
+  {product:"Auto Parts",             usOnEU:15,  euOnUS:4.5, note:"Framework Agreement caps at 15%. EU rate ~3–4.5%."},
+  {product:"Dairy Products",         usOnEU:15,  euOnUS:30,  note:"Framework 15% cap. EU avg ~30% on US dairy (high MFN + TRQs)."},
+  {product:"Beef & Meat",            usOnEU:15,  euOnUS:12.8,note:"US Framework 15%. EU avg ~12.8% + strict SPS measures."},
+  {product:"Wine & Spirits",         usOnEU:15,  euOnUS:0,   note:"US Framework 15%. EU: 0% on US wine (already duty-free)."},
+  {product:"Cereals & Grains",       usOnEU:3.5, euOnUS:35,  note:"US MFN ~3.5%. EU heavily protects grains (CAP), avg ~35%."},
+  {product:"Sugar & Confectionery",  usOnEU:15,  euOnUS:30,  note:"Both heavily protected. US TRQ system. EU high duties."},
+  {product:"Chemicals",              usOnEU:5.5, euOnUS:4.6, note:"Both relatively low. Heading to 0% under Framework."},
+  {product:"Pharmaceuticals",        usOnEU:0,   euOnUS:0,   note:"Both 0% (WTO Pharma Agreement, zero-for-zero)."},
+  {product:"Machinery",              usOnEU:2.4, euOnUS:1.7, note:"Low MFN rates. Framework targets 0%."},
+  {product:"Electronics & Semiconductors",usOnEU:0, euOnUS:0, note:"ITA (WTO Info Tech Agreement) — 0% on both sides."},
+  {product:"Textiles & Apparel",     usOnEU:12,  euOnUS:12,  note:"Both ~12% avg. IEEPA surcharges removed by Court."},
+  {product:"Footwear",               usOnEU:11,  euOnUS:8,   note:"US avg ~11%. EU avg ~8%."},
+  {product:"Ceramics & Glass",       usOnEU:6,   euOnUS:5,   note:"Moderate rates both sides."},
+  {product:"Plastics & Rubber",      usOnEU:4,   euOnUS:4,   note:"Similar rates ~4%. Framework targets reduction."},
+  {product:"Paper & Pulp",           usOnEU:0,   euOnUS:0,   note:"Essentially tariff-free both directions."},
+  {product:"Furniture",              usOnEU:2.5, euOnUS:2.7, note:"Low MFN rates both sides."},
+  {product:"Aircraft (civil)",       usOnEU:0,   euOnUS:0,   note:"WTO Agreement on Trade in Civil Aircraft — 0%."},
+  {product:"Copper",                 usOnEU:25,  euOnUS:0,   note:"Section 232 expansion (2025). EU: 0% MFN."},
+  {product:"Lumber & Wood",          usOnEU:15,  euOnUS:0,   note:"US Framework ceiling. EU: 0% on most wood."},
+  {product:"Tobacco",                usOnEU:15,  euOnUS:10,  note:"US Framework. EU moderate rate + excise."},
+  {product:"Olive Oil",              usOnEU:5,   euOnUS:40,  note:"US low MFN. EU heavily protects (CAP)."},
+  {product:"Fish & Seafood",         usOnEU:5,   euOnUS:12,  note:"US low. EU avg ~12%, with Framework concessions coming."},
+];
+
+// WTO MFN baseline (pre-2025 escalation)
+const mfnTariffs = [
+  {product:"Steel",                  usOnEU:0,   euOnUS:0,   note:"Pre-232: 0% MFN (generally). Both low."},
+  {product:"Aluminum",               usOnEU:2.6, euOnUS:6,   note:"US avg 2.6%. EU avg 6%."},
+  {product:"Automobiles",            usOnEU:2.5, euOnUS:10,  note:"US 2.5% (famously low). EU 10%."},
+  {product:"Auto Parts",             usOnEU:2.5, euOnUS:4.5, note:"US ~2.5%. EU ~3–4.5%."},
+  {product:"Dairy Products",         usOnEU:20,  euOnUS:30,  note:"Both heavily protected. US avg ~20%, EU avg ~30%."},
+  {product:"Beef & Meat",            usOnEU:4,   euOnUS:12.8,note:"US ~4% but EU ~12.8% + hormone ban restrictions."},
+  {product:"Wine & Spirits",         usOnEU:5,   euOnUS:0,   note:"US ~5% on wine. EU 0% on spirits."},
+  {product:"Cereals & Grains",       usOnEU:3.5, euOnUS:35,  note:"US low. EU heavily protected (CAP)."},
+  {product:"Sugar & Confectionery",  usOnEU:16,  euOnUS:30,  note:"Both protected. US has TRQ system ~16% avg."},
+  {product:"Chemicals",              usOnEU:5.5, euOnUS:4.6, note:"Both moderate/low."},
+  {product:"Pharmaceuticals",        usOnEU:0,   euOnUS:0,   note:"Zero-for-zero agreement."},
+  {product:"Machinery",              usOnEU:2.4, euOnUS:1.7, note:"Both low."},
+  {product:"Electronics & Semiconductors",usOnEU:0,euOnUS:0, note:"ITA — both 0%."},
+  {product:"Textiles & Apparel",     usOnEU:12,  euOnUS:12,  note:"Both ~12% avg MFN."},
+  {product:"Footwear",               usOnEU:11,  euOnUS:8,   note:"US ~11%. EU ~8%."},
+  {product:"Ceramics & Glass",       usOnEU:6,   euOnUS:5,   note:"Both moderate."},
+  {product:"Plastics & Rubber",      usOnEU:4,   euOnUS:4,   note:"Both ~4%."},
+  {product:"Paper & Pulp",           usOnEU:0,   euOnUS:0,   note:"Both 0%."},
+  {product:"Furniture",              usOnEU:2.5, euOnUS:2.7, note:"Both low."},
+  {product:"Aircraft (civil)",       usOnEU:0,   euOnUS:0,   note:"WTO Agreement — 0%."},
+  {product:"Copper",                 usOnEU:3,   euOnUS:0,   note:"US ~3% MFN. EU 0%."},
+  {product:"Lumber & Wood",          usOnEU:3,   euOnUS:0,   note:"US ~3% MFN. EU 0%."},
+  {product:"Tobacco",                usOnEU:15,  euOnUS:10,  note:"US higher MFN. EU moderate."},
+  {product:"Olive Oil",              usOnEU:5,   euOnUS:40,  note:"US low. EU very high (CAP)."},
+  {product:"Fish & Seafood",         usOnEU:5,   euOnUS:12,  note:"US low. EU moderate."},
+];
+
+// ─── TOOLTIP ─────────────────────────────────────────────────────────
+const tooltip = document.getElementById("tooltip");
+const ttName  = document.getElementById("ttName");
+const ttVals  = document.getElementById("ttVals");
+
+// ─── HORIZONTAL BAR CHART RENDERER ──────────────────────────────────
+function renderHBarChart(svgId, data) {
+  // Sort by max(usOnEU, euOnUS) descending so biggest tariff gaps are on top
+  const sorted = [...data].sort((a, b) => Math.max(b.usOnEU, b.euOnUS) - Math.max(a.usOnEU, a.euOnUS));
+  const N = sorted.length;
+
+  const margin = {top: 10, right: 70, bottom: 30, left: 200};
+  const rowH = 28;
+  const barH = 10;
+  const plotW = 600;
+  const plotH = N * rowH;
+  const totalW = margin.left + plotW + margin.right;
+  const totalH = margin.top + plotH + margin.bottom;
+  const maxV = 55; // max tariff %
+
+  function xScale(v) { return margin.left + (v / maxV) * plotW; }
+
+  const svg = document.getElementById(svgId);
+  svg.setAttribute("viewBox", `0 0 ${totalW} ${totalH}`);
+  svg.setAttribute("width", "100%");
+  svg.style.display = "block";
+  svg.innerHTML = "";
+
+  // X gridlines
+  for (let v = 0; v <= 50; v += 10) {
+    const x = xScale(v);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", x); line.setAttribute("x2", x);
+    line.setAttribute("y1", margin.top); line.setAttribute("y2", margin.top + plotH);
+    line.setAttribute("stroke", v === 0 ? "#8b90a0" : "#2a2e3a");
+    line.setAttribute("stroke-width", v === 0 ? 1 : 0.5);
+    svg.appendChild(line);
+
+    // X label
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", x);
+    label.setAttribute("y", margin.top + plotH + 16);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("fill", "#8b90a0");
+    label.setAttribute("font-size", "9");
+    label.textContent = v + "%";
+    svg.appendChild(label);
+  }
+
+  // Rows
+  sorted.forEach((d, i) => {
+    const y = margin.top + i * rowH;
+    const cy = y + rowH / 2;
+
+    // Product label
+    const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    lbl.setAttribute("x", margin.left - 8);
+    lbl.setAttribute("y", cy + 4);
+    lbl.setAttribute("text-anchor", "end");
+    lbl.setAttribute("fill", "#e4e6ed");
+    lbl.setAttribute("font-size", "10");
+    lbl.setAttribute("font-weight", "600");
+    lbl.textContent = d.product;
+    svg.appendChild(lbl);
+
+    // US bar (top of pair) — red/warm
+    const usW = Math.max((d.usOnEU / maxV) * plotW, 0);
+    const usBar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    usBar.setAttribute("class", "bar-rect");
+    usBar.setAttribute("x", xScale(0));
+    usBar.setAttribute("y", cy - barH - 1);
+    usBar.setAttribute("width", usW);
+    usBar.setAttribute("height", barH);
+    usBar.setAttribute("rx", 2);
+    usBar.setAttribute("fill", "oklch(0.55 0.18 25)");
+    svg.appendChild(usBar);
+
+    // US value
+    if (d.usOnEU > 0) {
+      const usVal = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      usVal.setAttribute("x", xScale(0) + usW + 4);
+      usVal.setAttribute("y", cy - barH / 2 + 3);
+      usVal.setAttribute("fill", "oklch(0.65 0.15 25)");
+      usVal.setAttribute("font-size", "8");
+      usVal.setAttribute("font-weight", "700");
+      usVal.textContent = d.usOnEU + "%";
+      svg.appendChild(usVal);
+    }
+
+    // EU bar (bottom of pair) — blue
+    const euW = Math.max((d.euOnUS / maxV) * plotW, 0);
+    const euBar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    euBar.setAttribute("class", "bar-rect");
+    euBar.setAttribute("x", xScale(0));
+    euBar.setAttribute("y", cy + 1);
+    euBar.setAttribute("width", euW);
+    euBar.setAttribute("height", barH);
+    euBar.setAttribute("rx", 2);
+    euBar.setAttribute("fill", "oklch(0.55 0.15 230)");
+    svg.appendChild(euBar);
+
+    // EU value
+    if (d.euOnUS > 0) {
+      const euVal = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      euVal.setAttribute("x", xScale(0) + euW + 4);
+      euVal.setAttribute("y", cy + barH / 2 + 5);
+      euVal.setAttribute("fill", "oklch(0.65 0.12 230)");
+      euVal.setAttribute("font-size", "8");
+      euVal.setAttribute("font-weight", "700");
+      euVal.textContent = d.euOnUS + "%";
+      svg.appendChild(euVal);
+    }
+
+    // Tooltip on both bars
+    [usBar, euBar].forEach(bar => {
+      bar.addEventListener("mouseenter", () => {
+        ttName.textContent = d.product;
+        ttVals.innerHTML =
+          `<span style="color:oklch(0.65 0.15 25)">🇺🇸 US on EU: ${d.usOnEU}%</span><br>` +
+          `<span style="color:oklch(0.65 0.12 230)">🇪🇺 EU on US: ${d.euOnUS}%</span><br>` +
+          `<span style="color:var(--fg-dim)">${d.note}</span>`;
+        tooltip.style.display = "block";
+      });
+      bar.addEventListener("mousemove", (e) => {
+        tooltip.style.left = (e.clientX + 14) + "px";
+        tooltip.style.top  = (e.clientY + 14) + "px";
+      });
+      bar.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+    });
+  });
+}
+
+renderHBarChart("chart1", currentTariffs);
+renderHBarChart("chart2", mfnTariffs);
+</script>
+</body>
+</html>

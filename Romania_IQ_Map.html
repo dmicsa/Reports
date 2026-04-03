@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IQ Mediu pe Județe — România</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f1117;
+    --surface: #181b24;
+    --border:  #2a2e3a;
+    --fg:      #e4e6ed;
+    --fg-dim:  #8b90a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    min-height: 100vh; padding: 2rem;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    color: #FDF6E3; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
+  }
+  .card h1 { font-size: 1.1rem; font-weight: 700; margin-bottom: .6rem; color: var(--fg); }
+
+  #mapSvg { width: 100%; display: block; }
+  #mapSvg path.judet {
+    stroke: #0f1117; stroke-width: 0.6;
+    cursor: pointer; transition: stroke-width 0.15s;
+  }
+  #mapSvg path.judet:hover { stroke: var(--fg); stroke-width: 1.8; }
+  #mapSvg text.iq-label {
+    font-family: 'Inter', sans-serif; font-weight: 700;
+    fill: #000; pointer-events: none; text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 100;
+    background: #1f2330ee; border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem .9rem;
+    font-size: .85rem; display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .tooltip .name { font-weight: 700; margin-bottom: .15rem; }
+  .tooltip .iq-val { font-size: 1.1rem; font-weight: 700; }
+
+  .legend-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: .6rem; margin-top: 1rem; flex-wrap: wrap;
+  }
+  .legend-gradient {
+    width: 280px; height: 14px; border-radius: 4px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143));
+  }
+  .legend-label { font-size: .75rem; color: var(--fg-dim); font-weight: 500; }
+
+  .sources {
+    background: var(--surface);
+    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .5rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; }
+  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>IQ Mediu Estimat pe Județe — România</h1>
+    <p>Estimări bazate pe date urbane (Gândul 2026) și media națională · Paleta RG (OKLCH)</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <div class="card">
+    <h1>Hartă Coropletă — IQ Mediu Estimat</h1>
+    <svg id="mapSvg"></svg>
+    <div class="legend-bar">
+      <span class="legend-label">IQ mai mic (~91)</span>
+      <div class="legend-gradient"></div>
+      <span class="legend-label">IQ mai mare (~105)</span>
+    </div>
+  </div>
+
+  <div class="sources">
+    <h3>Surse de Date</h3>
+    <ul>
+      <li><strong>Estimări IQ urban (2026):</strong> Gândul — "IQ-ul mediu în principalele orașe din România".<br>
+        <a href="https://www.gandul.ro/" target="_blank">https://www.gandul.ro/</a></li>
+      <li><strong>Media națională:</strong> Lynn, R. & Vanhanen, T. / Becker NIQ Dataset — IQ mediu România ≈ 94.<br>
+        <a href="https://worldpopulationreview.com/country-rankings/average-iq-by-country" target="_blank">World Population Review — Average IQ by Country</a></li>
+      <li><strong>Daniel David (2015):</strong> Studiu care arată distribuție relativ omogenă a inteligenței pe regiuni.<br>
+        <a href="https://doi.org/10.1016/j.intell.2015.06.001" target="_blank">Intelligence, 52, 2015</a></li>
+      <li><strong>Geometria județelor:</strong> GeoJSON România — codeforgermany/click_that_hood.<br>
+        <a href="https://github.com/codeforgermany/click_that_hood/blob/main/public/data/romania.geojson" target="_blank">github.com</a></li>
+      <li><strong>Paleta:</strong> RG diverging (OKLCH) — Red (scăzut) → Verde (ridicat).</li>
+    </ul>
+    <div class="note">
+      <strong>Notă importantă:</strong> Nu există date de IQ la nivel de județ din surse științifice. Valorile de pe hartă
+      sunt <em>estimări</em> bazate pe: (1) IQ-ul mediu al celui mai mare oraș din județ (studiul Gândul 2026),
+      (2) media națională (94) pentru județele fără date urbane, (3) ajustări moderate bazate pe nivelul de urbanizare.
+      Studiul Daniel David (2015) a concluzionat că nu există diferențe majore între regiuni, deci variațiile afișate
+      sunt mici. Aceste estimări nu trebuie considerate date validate științific.
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="name" id="ttName"></div>
+  <div class="iq-val" id="ttIQ"></div>
+</div>
+
+<script>
+// ─── IQ DATA BY COUNTY ────────────────────────────────────────────────
+// Based on: Gândul 2026 city IQ estimates, national average 94 (Lynn/Vanhanen/Becker)
+// County IQ approximated from the IQ of its main city / residence,
+// adjusted slightly downward for mixed urban-rural populations.
+// Daniel David (2015) found homogeneous distribution — so variations are modest.
+const iqData = {
+  "Alba":           95,  // Alba Iulia area
+  "Arad":           97,  // Arad city ~98
+  "Argeș":          97,  // Pitești ~98
+  "Bacău":          94,  // Bacău city ~95
+  "Bihor":          98,  // Oradea ~100
+  "Bistrița-Năsăud":93,  // smaller city
+  "Botoșani":       91,  // rural, lower urbanization
+  "Brașov":        100,  // Brașov ~101.5
+  "Brăila":         94,  // Brăila city ~95
+  "Buzău":          93,  // mid-sized
+  "Caraș-Severin":  93,  // Reșița area
+  "Călărași":       91,  // rural, high illiteracy
+  "Cluj":          103,  // Cluj-Napoca ~104
+  "Constanța":      99,  // Constanța ~100
+  "Covasna":        93,  // smaller county
+  "Dâmbovița":      94,  // Târgoviște area
+  "Dolj":           97,  // Craiova ~99
+  "Galați":         97,  // Galați ~98
+  "Giurgiu":        91,  // rural, highest illiteracy
+  "Gorj":           94,  // Târgu Jiu area
+  "Harghita":       93,  // Miercurea Ciuc
+  "Hunedoara":      95,  // Deva / Hunedoara
+  "Ialomița":       91,  // rural
+  "Iași":          100,  // Iași ~102
+  "Ilfov":          99,  // Bucharest satellite
+  "Maramureș":      94,  // Baia Mare ~98
+  "Mehedinți":      92,  // Drobeta-Turnu Severin
+  "Mureș":          97,  // Târgu Mureș ~99
+  "Neamț":          93,  // Piatra Neamț
+  "Olt":            92,  // Slatina, rural
+  "Prahova":        98,  // Ploiești ~99
+  "Satu Mare":      94,  // Satu Mare city
+  "Sălaj":          93,  // Zalău
+  "Sibiu":         100,  // Sibiu ~101
+  "Suceava":        93,  // Suceava city
+  "Teleorman":      91,  // rural, high illiteracy
+  "Timiș":         102,  // Timișoara ~103
+  "Tulcea":         92,  // Tulcea, rural
+  "Vaslui":         91,  // rural, high illiteracy
+  "Vâlcea":         94,  // Râmnicu Vâlcea
+  "Vrancea":        93,  // Focșani
+  "București":     105,  // București ~105
+};
+
+// ─── RG PALETTE (OKLCH) ──────────────────────────────────────────────
+// From Palettes.json: Red oklch(0.50 0.20 25) → Cream #FDF6E3 → Green oklch(0.50 0.20 143)
+const IQ_MIN = 91, IQ_MAX = 105;
+
+function iqToColor(iq) {
+  let t = (iq - IQ_MIN) / (IQ_MAX - IQ_MIN);
+  t = Math.max(0, Math.min(1, t));
+  let L, C, hue;
+  if (t <= 0.5) {
+    const s = t * 2;
+    L   = 0.50 + s * (0.97 - 0.50);
+    C   = 0.20 + s * (0.02 - 0.20);
+    hue = 25   + s * (95   - 25);
+  } else {
+    const s = (t - 0.5) * 2;
+    L   = 0.97 + s * (0.50 - 0.97);
+    C   = 0.02 + s * (0.20 - 0.02);
+    hue = 95   + s * (143  - 95);
+  }
+  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
+}
+
+// ─── NAME MATCHING ────────────────────────────────────────────────────
+function normalize(name) {
+  return name
+    .replace(/[îÎ]/g, 'i').replace(/[âÂ]/g, 'a')
+    .replace(/[ăĂ]/g, 'a').replace(/[șȘ]/g, 's').replace(/[țȚ]/g, 't')
+    .toLowerCase().trim();
+}
+
+const normalizedIQ = {};
+for (const [key, val] of Object.entries(iqData)) {
+  normalizedIQ[normalize(key)] = { name: key, iq: val };
+}
+
+function findData(geoName) {
+  if (iqData[geoName] !== undefined) return { name: geoName, iq: iqData[geoName] };
+  const norm = normalize(geoName);
+  if (normalizedIQ[norm]) return normalizedIQ[norm];
+  for (const [key, val] of Object.entries(normalizedIQ)) {
+    if (norm.includes(key) || key.includes(norm)) return val;
+  }
+  if (norm.includes("bucure")) return normalizedIQ[normalize("București")];
+  return null;
+}
+
+// ─── MAP ──────────────────────────────────────────────────────────────
+const WIDTH = 900, HEIGHT = 620;
+
+const svg = d3.select("#mapSvg")
+  .attr("viewBox", `0 0 ${WIDTH} ${HEIGHT}`)
+  .attr("preserveAspectRatio", "xMidYMid meet");
+
+const tooltip = document.getElementById("tooltip");
+const ttName  = document.getElementById("ttName");
+const ttIQ    = document.getElementById("ttIQ");
+
+const projection = d3.geoMercator()
+  .center([25, 46])
+  .scale(4500)
+  .translate([WIDTH / 2, HEIGHT / 2]);
+
+const pathGen = d3.geoPath().projection(projection);
+
+const geoUrl = "https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/romania.geojson";
+
+d3.json(geoUrl).then(geo => {
+  const features = geo.features;
+
+  svg.selectAll("path.judet")
+    .data(features)
+    .enter()
+    .append("path")
+    .attr("class", "judet")
+    .attr("d", pathGen)
+    .attr("fill", f => {
+      const name = f.properties.name || f.properties.NAME || f.properties.JUDET || "";
+      const info = findData(name);
+      return info ? iqToColor(info.iq) : "#2a2e3a";
+    })
+    .on("mouseenter", (event, f) => {
+      const name = f.properties.name || f.properties.NAME || f.properties.JUDET || "";
+      const info = findData(name);
+      if (info) {
+        ttName.textContent = info.name;
+        ttIQ.textContent = `IQ ≈ ${info.iq}`;
+        ttIQ.style.color = iqToColor(info.iq);
+        tooltip.style.display = "block";
+      }
+    })
+    .on("mousemove", (event) => {
+      tooltip.style.left = (event.clientX + 14) + "px";
+      tooltip.style.top  = (event.clientY + 14) + "px";
+    })
+    .on("mouseleave", () => { tooltip.style.display = "none"; });
+
+  // IQ labels inside counties
+  svg.selectAll("text.iq-label")
+    .data(features)
+    .enter()
+    .append("text")
+    .attr("class", "iq-label")
+    .each(function(f) {
+      const c = pathGen.centroid(f);
+      d3.select(this).attr("x", c[0]).attr("y", c[1]);
+    })
+    .attr("font-size", f => {
+      const bounds = pathGen.bounds(f);
+      if (!bounds || !isFinite(bounds[0][0])) return "0";
+      const w = bounds[1][0] - bounds[0][0];
+      const h = bounds[1][1] - bounds[0][1];
+      const size = Math.min(w, h);
+      if (size < 20) return "0";
+      if (size < 35) return "8";
+      if (size < 55) return "9";
+      return "10";
+    })
+    .text(f => {
+      const name = f.properties.name || f.properties.NAME || f.properties.JUDET || "";
+      const info = findData(name);
+      return info ? info.iq : "";
+    });
+}).catch(err => {
+  console.error("Failed to load GeoJSON:", err);
+  document.getElementById("mapSvg").innerHTML =
+    '<text x="450" y="310" text-anchor="middle" fill="#8b90a0" font-size="14">Nu s-au putut încărca datele hărții.</text>';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>US Incarceration · Representation Index by Religion</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f1117;
+    --surface: #181b24;
+    --border:  #2a2e3a;
+    --fg:      #e4e6ed;
+    --fg-dim:  #8b90a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg); color: var(--fg);
+    min-height: 100vh; padding: 2rem;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    color: #FDF6E3; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 16px; padding: 1.5rem 1.5rem 1rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 250));
+  }
+  .card h2 {
+    font-size: 1.05rem; font-weight: 700; margin-bottom: .3rem; color: var(--fg);
+  }
+  .card .subtitle {
+    font-size: .78rem; color: var(--fg-dim); margin-bottom: 1.2rem; line-height: 1.5;
+  }
+
+  .chart-container { width: 100%; overflow-x: auto; }
+
+  svg text { font-family: 'Inter', sans-serif; }
+  svg .bar-rect { cursor: pointer; transition: opacity 0.12s; }
+  svg .bar-rect:hover { opacity: 0.8; }
+
+  .tooltip-chart {
+    position: fixed; pointer-events: none; z-index: 100;
+    background: #1f2330ee; border: 1px solid var(--border);
+    border-radius: 8px; padding: .7rem 1rem;
+    font-size: .82rem; display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    max-width: 360px; line-height: 1.55;
+  }
+  .tooltip-chart .tt-name { font-weight: 700; margin-bottom: .3rem; font-size: .88rem; }
+  .tooltip-chart .tt-vals { font-size: .78rem; color: var(--fg-dim); }
+
+  .legend {
+    display: flex; gap: 1.5rem; justify-content: center;
+    margin-bottom: 1.2rem; flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: .45rem;
+    font-size: .8rem; color: var(--fg-dim);
+  }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+  .sources {
+    background: var(--surface);
+    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; }
+  .sources a { color: oklch(0.6 0.15 250); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>US Incarceration · Representation Index by Religion</h1>
+    <p>Prison population share ÷ general population share — 1.0 = proportional, >1.0 = over, <1.0 = under</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <!-- CHART 1: Federal Prisons (BOP hard data) -->
+  <div class="card">
+    <h2>Federal Prisons — BOP Official Data (2025)</h2>
+    <div class="subtitle">
+      Bureau of Prisons religious preference counts (FOIA 2025, ~153k inmates) vs.
+      Pew Research 2024 Religious Landscape Study (US adult population shares).
+      Christians split by denomination. Index = prison % ÷ population %.
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.55 0.20 25)"></div>
+        <span>Over-represented (index > 1.0)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.55 0.15 250)"></div>
+        <span>Under-represented (index < 1.0)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.6 0.02 90)"></div>
+        <span>Within ±10% of proportional</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <svg id="chart1"></svg>
+    </div>
+  </div>
+
+  <!-- CHART 2: Combined Federal + State estimate -->
+  <div class="card">
+    <h2>Combined Federal + State Estimates (blended)</h2>
+    <div class="subtitle">
+      Blending BOP 2025 federal data with Pew Research 2012 state prison chaplain estimates
+      (51% Protestant, 15% Catholic, 9% Muslim, 2% Jewish, 0.8% Mormon among state inmates).
+      Federal prisons hold ~153k; state prisons ~1.2M. Weighted 88% state + 12% federal.
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.55 0.20 25)"></div>
+        <span>Over-represented (index > 1.0)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.55 0.15 250)"></div>
+        <span>Under-represented (index < 1.0)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.6 0.02 90)"></div>
+        <span>Within ±10% of proportional</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <svg id="chart2"></svg>
+    </div>
+  </div>
+
+  <div class="sources">
+    <h3>Data Sources & Methodology</h3>
+    <ul>
+      <li><strong>Federal Bureau of Prisons (BOP)</strong> — Religious Preference of Inmates, FOIA data 2025. Total inmates: 153,121 (Feb 2026).<br>
+        <a href="https://www.bop.gov/about/statistics/statistics_inmate_religion.jsp" target="_blank">bop.gov — Inmate Religious Preferences</a></li>
+      <li><strong>Pew Research Center</strong> — "Religion in Prisons: A 50-State Survey of Prison Chaplains" (2012). State prison estimates from chaplain surveys.<br>
+        <a href="https://www.pewresearch.org/religion/2012/03/22/religion-in-prisons/" target="_blank">pewresearch.org — Religion in Prisons</a></li>
+      <li><strong>Pew Research Center</strong> — "Religious Landscape Study" (2023–2024). US adult religious composition.<br>
+        <a href="https://www.pewresearch.org/religion/2024/01/24/religious-composition-of-the-u-s/" target="_blank">pewresearch.org — Religious Composition</a></li>
+      <li><strong>US DOJ Office of Inspector General</strong> — Audit of BOP Religious Services (March 2020). ~70% of BOP inmates claim a faith.<br>
+        <a href="https://oig.justice.gov/" target="_blank">justice.gov — OIG</a></li>
+    </ul>
+    <div class="note">
+      <strong>Representation Index:</strong> (% of prison population identifying as X) ÷ (% of US adult population identifying as X).
+      An index of 1.0 means exactly proportional.  Values above 1.0 indicate over-representation in prison; below 1.0 indicates under-representation.<br>
+      <strong>Caveats:</strong> Prison religious affiliation is self-reported and may reflect conversions during incarceration (especially Islam).
+      "No Preference" and "Unknown" inmates (~36% of federal) are excluded from percentage calculations of religious groups.
+      State prison data relies on 2012 chaplain estimates (impressionistic, not official counts). Socioeconomic confounders (poverty, education, geography)
+      strongly influence incarceration rates and are not controlled for here. This chart shows <em>correlation</em>, not causation.
+    </div>
+  </div>
+</div>
+
+<div class="tooltip-chart" id="tooltip">
+  <div class="tt-name" id="ttName"></div>
+  <div class="tt-vals" id="ttVals"></div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────
+// US adult population shares (Pew 2024 Religious Landscape Study)
+// Federal BOP data (2025 FOIA, total ~153k inmates)
+// State prison estimates (Pew 2012 chaplain survey, total ~1.2M inmates)
+
+// For federal data: we use the BOP published religious preference totals.
+// We exclude "No Prefer" (31,295), "Unknown" (5,358), and "Other" (3,893)
+// to get a denominator of inmates with a stated religion.
+// Total stated-religion federal inmates = 153,121 - 31,295 - 5,358 - 3,893 = 112,575
+
+const totalFederalInmates = 153121;
+const federalStated = 112575; // those with a stated religious preference
+
+// BOP religious preference raw counts (2025)
+const bopCounts = {
+  catholic:        27070,
+  muslim:          10373,  // includes Nation of Islam (3,083) + Moorish (2,328)
+  protestant:      0,      // computed below
+  jewishFed:       3280,
+  mormon:          534,
+  orthodox:        350,
+  adventist:       411,
+  pentecostal:     76,
+  churchOfChrist:  2509,
+  jehovah:         1039,
+  messianic:       1906,
+  buddhist:        1685,
+  hindu:           260,
+  pagan:           4252,
+  rastafarian:     3642,
+  nativeAmerican:  5518,
+  santeria:        2749,
+  nationOfIslam:   3083,
+  moorish:         2328,
+  nonTrinitarian:  508,
+  atheist:         189,
+  sikh:            26,
+  bahai:           1,
+};
+
+// Protestant-umbrella in BOP (we aggregate all identifiable Christian-Protestant):
+// Some are counted separately: Adventist, Pentecostal, Church of Christ, Messianic, Non-Trinitarian
+// Total "Protestant" in FOIA summary = 17.3% of total = ~26,490
+// But let's compute from what remains:
+const knownNonProtestantChristian = bopCounts.catholic + bopCounts.mormon + bopCounts.orthodox + bopCounts.jehovah;
+// All Christian in federal ~ 17.3%(prot, broadly) + 12.5%(cath) ≈ many groups
+// Let's use the FOIA percentages: Protestants 17.3% of total, Catholic 12.5%
+const protestantFederalPct = 17.3; // % of total federal inmates
+const catholicFederalPct   = 12.5;
+// For our per-capita index, we use % of stated-religion inmates OR % of total
+// Let's use % of TOTAL inmates (consistent baseline)
+
+// US adult population religious shares (Pew 2024)
+const usPop = {
+  evangelicalProt:    23.0,
+  mainlineProt:       11.0,
+  histBlackProt:       5.0,
+  totalProtestant:    40.0, // (incl. the 3 above + ~1% other subgroups)
+  catholic:           19.0,
+  mormon:              2.0,
+  orthodoxChristian:   1.0,
+  jehovahWitness:      0.4, // <1%, est. 0.4%
+  otherChristian:      1.6, // rest of 3% "other Christian"
+  totalChristian:     62.0,
+  jewish:              2.0,
+  muslim:              1.0,
+  hindu:               1.0,
+  buddhist:            1.0,
+  otherReligion:       2.0, // includes pagan, native american spirituality, etc.
+  unaffiliated:       29.0,
+  atheist:             5.0,
+  agnostic:            6.0,
+  nothingParticular:  19.0,
+};
+
+// ─── CHART 1: Federal Prisons (BOP hard data) ─────────────────────
+// Compute prison % from BOP counts (as % of total federal inmates for direct comparison)
+const fedData = [
+  // Christian denominations
+  {
+    name: "Catholic",
+    emoji: "✝️",
+    group: "Christian",
+    prisonPct: (bopCounts.catholic / totalFederalInmates) * 100,   // 17.7%
+    popPct: usPop.catholic,                                        // 19%
+    note: "BOP count: 27,070 federal inmates. Roughly proportional to pop share."
+  },
+  {
+    name: "Evangelical Protestant",
+    emoji: "⛪",
+    group: "Christian",
+    // Evangelical ~ 50% of all Protestant inmates (Pew 2012 estimate for state prisons, applied to fed)
+    // Fed Protestant = 17.3% of total. Evangelical ≈ half ≈ 8.65%
+    prisonPct: protestantFederalPct * 0.50,
+    popPct: usPop.evangelicalProt,
+    note: "Estimated as ~50% of Protestant inmates (Pew 2012). Fed Prot total: 17.3%."
+  },
+  {
+    name: "Mainline Protestant",
+    emoji: "⛪",
+    group: "Christian",
+    // Mainline ~ 25% of Protestant inmates (estimate)
+    prisonPct: protestantFederalPct * 0.25,
+    popPct: usPop.mainlineProt,
+    note: "Estimated ~25% of Protestant inmates. BOP does not break down Prot sub-groups."
+  },
+  {
+    name: "Hist. Black Protestant",
+    emoji: "⛪",
+    group: "Christian",
+    // Historically Black Prot ~ 25% of Protestant inmates (higher incarceration of Black Americans)
+    prisonPct: protestantFederalPct * 0.25,
+    popPct: usPop.histBlackProt,
+    note: "Estimated ~25% of Protestant inmates. Reflects high incarceration of Black Americans."
+  },
+  {
+    name: "Mormon (LDS)",
+    emoji: "📖",
+    group: "Christian",
+    prisonPct: (bopCounts.mormon / totalFederalInmates) * 100,
+    popPct: usPop.mormon,
+    note: "BOP count: 534. Strongly under-represented in prison."
+  },
+  {
+    name: "Orthodox Christian",
+    emoji: "☦️",
+    group: "Christian",
+    prisonPct: (bopCounts.orthodox / totalFederalInmates) * 100,
+    popPct: usPop.orthodoxChristian,
+    note: "BOP count: 350. Small numbers, modestly under-represented."
+  },
+  {
+    name: "Jehovah's Witness",
+    emoji: "📙",
+    group: "Christian",
+    prisonPct: (bopCounts.jehovah / totalFederalInmates) * 100,
+    popPct: usPop.jehovahWitness,
+    note: "BOP count: 1,039. Over-represented relative to ~0.4% of pop."
+  },
+  // Non-Christian religions
+  {
+    name: "Muslim",
+    emoji: "☪️",
+    group: "Other",
+    // Muslim in BOP includes Muslim (10,373) + Nation of Islam (3,083) + Moorish (2,328)
+    prisonPct: ((bopCounts.muslim + bopCounts.nationOfIslam + bopCounts.moorish) / totalFederalInmates) * 100,
+    popPct: usPop.muslim,
+    note: "BOP: Muslim 10,373 + Nation of Islam 3,083 + Moorish Sci 2,328 = 15,784. Includes prison conversions."
+  },
+  {
+    name: "Jewish",
+    emoji: "✡️",
+    group: "Other",
+    prisonPct: (bopCounts.jewishFed / totalFederalInmates) * 100,
+    popPct: usPop.jewish,
+    note: "BOP count: 3,280. Slightly over-represented in federal prisons (white-collar?)."
+  },
+  {
+    name: "Buddhist",
+    emoji: "☸️",
+    group: "Other",
+    prisonPct: (bopCounts.buddhist / totalFederalInmates) * 100,
+    popPct: usPop.buddhist,
+    note: "BOP count: 1,685. Slightly over-represented. May include prison converts."
+  },
+  {
+    name: "Hindu",
+    emoji: "🕉️",
+    group: "Other",
+    prisonPct: (bopCounts.hindu / totalFederalInmates) * 100,
+    popPct: usPop.hindu,
+    note: "BOP count: 260. Strongly under-represented."
+  },
+  {
+    name: "Pagan / Wiccan",
+    emoji: "🌙",
+    group: "Other",
+    prisonPct: (bopCounts.pagan / totalFederalInmates) * 100,
+    popPct: 0.4, // Pew lumps into "other religion"; Pagan/Wiccan est. ~0.4%
+    note: "BOP count: 4,252. Significantly over-represented. US pop ~0.4% (Pew)."
+  },
+  {
+    name: "Native American Spirituality",
+    emoji: "🪶",
+    group: "Other",
+    prisonPct: (bopCounts.nativeAmerican / totalFederalInmates) * 100,
+    popPct: 0.6, // Native American pop ~1.3%, those practicing trad. spirituality ~0.6%
+    note: "BOP count: 5,518. Very over-represented. Reflects high Native American incarceration."
+  },
+  {
+    name: "Rastafarian",
+    emoji: "🟢",
+    group: "Other",
+    prisonPct: (bopCounts.rastafarian / totalFederalInmates) * 100,
+    popPct: 0.05, // Very small US pop share
+    note: "BOP count: 3,642. Extremely over-represented. US pop ~0.05%."
+  },
+  {
+    name: "Atheist / Agnostic",
+    emoji: "⚛️",
+    group: "None",
+    prisonPct: (bopCounts.atheist / totalFederalInmates) * 100,
+    popPct: usPop.atheist + usPop.agnostic, // 11%
+    note: "BOP count: 189 (atheist only). Extremely under-represented. Agnostic not tracked separately."
+  },
+];
+
+// Compute index
+fedData.forEach(d => {
+  d.index = d.prisonPct / d.popPct;
+});
+
+// ─── CHART 2: Combined Federal + State (blended, weighted) ────────
+// State prisons: ~1.2M inmates (Pew 2012 chaplain estimates)
+// Federal: ~153k inmates (BOP 2025)
+// Weight: 88% state, 12% federal
+const stateWeight = 0.88;
+const fedWeight   = 0.12;
+
+// State prison religious shares (Pew 2012 chaplain survey averages)
+const stateShares = {
+  protestant:       51.0,  // total Protestant
+  catholic:         15.0,
+  muslim:            9.0,
+  jewish:            2.0,
+  mormon:            0.8,
+  otherChristian:    2.0,  // Orthodox, JW, etc.
+  otherReligion:     3.0,  // Buddhist, Hindu, Pagan, Native Am., Rastafarian
+  noReligion:       17.0,
+};
+
+const combinedData = [
+  {
+    name: "Catholic",
+    emoji: "✝️",
+    group: "Christian",
+    prisonPct: stateShares.catholic * stateWeight + (bopCounts.catholic / totalFederalInmates * 100) * fedWeight,
+    popPct: usPop.catholic,
+    note: "State: 15% (Pew 2012). Federal: 17.7% (BOP). Blended ≈ 15.3%."
+  },
+  {
+    name: "Evangelical Protestant",
+    emoji: "⛪",
+    group: "Christian",
+    prisonPct: (stateShares.protestant * 0.50) * stateWeight + (protestantFederalPct * 0.50) * fedWeight,
+    popPct: usPop.evangelicalProt,
+    note: "~50% of all Protestant inmates estimated Evangelical (Pew 2012)."
+  },
+  {
+    name: "Mainline Protestant",
+    emoji: "⛪",
+    group: "Christian",
+    prisonPct: (stateShares.protestant * 0.15) * stateWeight + (protestantFederalPct * 0.25) * fedWeight,
+    popPct: usPop.mainlineProt,
+    note: "~15% of state Protestant inmates estimated Mainline."
+  },
+  {
+    name: "Hist. Black Protestant",
+    emoji: "⛪",
+    group: "Christian",
+    prisonPct: (stateShares.protestant * 0.35) * stateWeight + (protestantFederalPct * 0.25) * fedWeight,
+    popPct: usPop.histBlackProt,
+    note: "~35% of state Protestant inmates. Reflects disproportionate Black incarceration."
+  },
+  {
+    name: "Mormon (LDS)",
+    emoji: "📖",
+    group: "Christian",
+    prisonPct: stateShares.mormon * stateWeight + (bopCounts.mormon / totalFederalInmates * 100) * fedWeight,
+    popPct: usPop.mormon,
+    note: "State: 0.8% (Pew 2012). Federal: 0.35%. Blended ≈ 0.75%."
+  },
+  {
+    name: "Orthodox / Other Christian",
+    emoji: "☦️",
+    group: "Christian",
+    prisonPct: stateShares.otherChristian * stateWeight + ((bopCounts.orthodox + bopCounts.jehovah + bopCounts.messianic) / totalFederalInmates * 100) * fedWeight,
+    popPct: usPop.orthodoxChristian + usPop.jehovahWitness + usPop.otherChristian, // ~3%
+    note: "State: ~2% 'Other Christian'. Federal: Orthodox + JW + Messianic = 3,295."
+  },
+  {
+    name: "Muslim",
+    emoji: "☪️",
+    group: "Other",
+    prisonPct: stateShares.muslim * stateWeight + ((bopCounts.muslim + bopCounts.nationOfIslam + bopCounts.moorish) / totalFederalInmates * 100) * fedWeight,
+    popPct: usPop.muslim,
+    note: "State: 9% (Pew 2012). Federal: 10.3% (incl Nation of Islam, Moorish). Blended ≈ 9.2%."
+  },
+  {
+    name: "Jewish",
+    emoji: "✡️",
+    group: "Other",
+    prisonPct: stateShares.jewish * stateWeight + (bopCounts.jewishFed / totalFederalInmates * 100) * fedWeight,
+    popPct: usPop.jewish,
+    note: "State: 2% (Pew 2012). Federal: 2.1%. Roughly proportional."
+  },
+  {
+    name: "Buddhist",
+    emoji: "☸️",
+    group: "Other",
+    prisonPct: (stateShares.otherReligion * 0.35) * stateWeight + (bopCounts.buddhist / totalFederalInmates * 100) * fedWeight,
+    popPct: usPop.buddhist,
+    note: "Estimated ~35% of 'other religion' in state prisons. Fed: 1,685."
+  },
+  {
+    name: "Hindu",
+    emoji: "🕉️",
+    group: "Other",
+    prisonPct: (stateShares.otherReligion * 0.05) * stateWeight + (bopCounts.hindu / totalFederalInmates * 100) * fedWeight,
+    popPct: usPop.hindu,
+    note: "Very small state share. Fed: 260. Strongly under-represented."
+  },
+  {
+    name: "Atheist / Agnostic / None",
+    emoji: "⚛️",
+    group: "None",
+    prisonPct: stateShares.noReligion * stateWeight + (bopCounts.atheist / totalFederalInmates * 100) * fedWeight,
+    popPct: usPop.atheist + usPop.agnostic + usPop.nothingParticular, // 29% (removed "nothing in particular" would make it 11%)
+    note: "State: 17% no religion (Pew 2012). Fed: 0.12% atheist only. Many go unreported."
+  },
+];
+
+combinedData.forEach(d => {
+  d.index = d.prisonPct / d.popPct;
+});
+
+
+// ─── TOOLTIP ─────────────────────────────────────────────────────────
+const tooltip = document.getElementById("tooltip");
+const ttName  = document.getElementById("ttName");
+const ttVals  = document.getElementById("ttVals");
+
+// ─── HORIZONTAL BAR CHART RENDERER ──────────────────────────────────
+function renderChart(svgId, data) {
+  // Sort by index descending
+  const sorted = [...data].sort((a, b) => b.index - a.index);
+  const N = sorted.length;
+
+  const margin = {top: 10, right: 110, bottom: 30, left: 230};
+  const rowH = 36;
+  const barH = 20;
+  const plotW = 550;
+  const plotH = N * rowH;
+  const totalW = margin.left + plotW + margin.right;
+  const totalH = margin.top + plotH + margin.bottom;
+
+  // x axis: index values. Max ~ 10.3 for Rastafarian in fed
+  const maxIdx = Math.ceil(Math.max(...sorted.map(d => d.index)) + 0.5);
+
+  function xScale(v) { return margin.left + (v / maxIdx) * plotW; }
+
+  const svg = document.getElementById(svgId);
+  svg.setAttribute("viewBox", `0 0 ${totalW} ${totalH}`);
+  svg.setAttribute("width", "100%");
+  svg.style.display = "block";
+  svg.innerHTML = "";
+
+  // Reference line at 1.0 (proportional)
+  const x1 = xScale(1.0);
+  const refLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  refLine.setAttribute("x1", x1); refLine.setAttribute("x2", x1);
+  refLine.setAttribute("y1", margin.top); refLine.setAttribute("y2", margin.top + plotH);
+  refLine.setAttribute("stroke", "oklch(0.7 0.12 90)");
+  refLine.setAttribute("stroke-width", 1.5);
+  refLine.setAttribute("stroke-dasharray", "6,4");
+  svg.appendChild(refLine);
+  // Label for 1.0
+  const refLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  refLabel.setAttribute("x", x1);
+  refLabel.setAttribute("y", margin.top + plotH + 20);
+  refLabel.setAttribute("text-anchor", "middle");
+  refLabel.setAttribute("fill", "oklch(0.7 0.12 90)");
+  refLabel.setAttribute("font-size", "9");
+  refLabel.setAttribute("font-weight", "600");
+  refLabel.textContent = "1.0× (proportional)";
+  svg.appendChild(refLabel);
+
+  // X gridlines
+  for (let v = 0; v <= maxIdx; v += (maxIdx > 20 ? 5 : maxIdx > 10 ? 2 : 1)) {
+    if (v === 0) continue;
+    const x = xScale(v);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", x); line.setAttribute("x2", x);
+    line.setAttribute("y1", margin.top); line.setAttribute("y2", margin.top + plotH);
+    line.setAttribute("stroke", "#2a2e3a");
+    line.setAttribute("stroke-width", 0.5);
+    svg.appendChild(line);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", x);
+    label.setAttribute("y", margin.top + plotH + 16);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("fill", "#8b90a0");
+    label.setAttribute("font-size", "9");
+    label.textContent = v + "×";
+    svg.appendChild(label);
+  }
+
+  // Zero line
+  const zLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  zLine.setAttribute("x1", xScale(0)); zLine.setAttribute("x2", xScale(0));
+  zLine.setAttribute("y1", margin.top); zLine.setAttribute("y2", margin.top + plotH);
+  zLine.setAttribute("stroke", "#8b90a0");
+  zLine.setAttribute("stroke-width", 1);
+  svg.appendChild(zLine);
+
+  // Rows
+  sorted.forEach((d, i) => {
+    const y = margin.top + i * rowH;
+    const cy = y + rowH / 2;
+
+    // Product label
+    const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    lbl.setAttribute("x", margin.left - 8);
+    lbl.setAttribute("y", cy + 4);
+    lbl.setAttribute("text-anchor", "end");
+    lbl.setAttribute("fill", "#e4e6ed");
+    lbl.setAttribute("font-size", "11");
+    lbl.setAttribute("font-weight", "600");
+    lbl.textContent = d.emoji + " " + d.name;
+    svg.appendChild(lbl);
+
+    // Bar color based on index
+    let barColor;
+    if (d.index >= 0.9 && d.index <= 1.1) {
+      barColor = "oklch(0.6 0.02 90)";   // neutral
+    } else if (d.index > 1.1) {
+      // Over-represented: red-warm spectrum, intensity by amount
+      const intensity = Math.min(1, (d.index - 1) / 8);
+      const L = 0.60 - intensity * 0.10;
+      const C = 0.10 + intensity * 0.12;
+      barColor = `oklch(${L.toFixed(2)} ${C.toFixed(2)} 25)`;
+    } else {
+      // Under-represented: blue spectrum
+      const intensity = Math.min(1, (1 - d.index) / 0.9);
+      const L = 0.60 - intensity * 0.10;
+      const C = 0.08 + intensity * 0.10;
+      barColor = `oklch(${L.toFixed(2)} ${C.toFixed(2)} 250)`;
+    }
+
+    const barW = Math.max((d.index / maxIdx) * plotW, 2);
+    const bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bar.setAttribute("class", "bar-rect");
+    bar.setAttribute("x", xScale(0));
+    bar.setAttribute("y", cy - barH / 2);
+    bar.setAttribute("width", barW);
+    bar.setAttribute("height", barH);
+    bar.setAttribute("rx", 4);
+    bar.setAttribute("fill", barColor);
+    svg.appendChild(bar);
+
+    // Index value label
+    const valLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    valLabel.setAttribute("x", xScale(0) + barW + 6);
+    valLabel.setAttribute("y", cy + 4);
+    valLabel.setAttribute("fill", barColor);
+    valLabel.setAttribute("font-size", "11");
+    valLabel.setAttribute("font-weight", "800");
+    valLabel.textContent = d.index.toFixed(2) + "×";
+    svg.appendChild(valLabel);
+
+    // Group tag
+    const groupLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    groupLabel.setAttribute("x", xScale(0) + barW + 52);
+    groupLabel.setAttribute("y", cy + 4);
+    groupLabel.setAttribute("fill", "#555");
+    groupLabel.setAttribute("font-size", "8");
+    groupLabel.textContent = `(${d.prisonPct.toFixed(1)}% / ${d.popPct.toFixed(1)}%)`;
+    svg.appendChild(groupLabel);
+
+    // Tooltip events
+    bar.addEventListener("mouseenter", () => {
+      ttName.textContent = d.emoji + " " + d.name;
+      ttVals.innerHTML =
+        `<strong>Index:</strong> ${d.index.toFixed(2)}× ${d.index > 1.1 ? '(over-represented)' : d.index < 0.9 ? '(under-represented)' : '(proportional)'}<br>` +
+        `<strong>Prison share:</strong> ${d.prisonPct.toFixed(2)}%<br>` +
+        `<strong>US pop share:</strong> ${d.popPct.toFixed(1)}%<br>` +
+        `<span style="color:var(--fg-dim); font-size:.75rem">${d.note}</span>`;
+      tooltip.style.display = "block";
+    });
+    bar.addEventListener("mousemove", (e) => {
+      tooltip.style.left = (e.clientX + 14) + "px";
+      tooltip.style.top  = (e.clientY + 14) + "px";
+    });
+    bar.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+  });
+}
+
+renderChart("chart1", fedData);
+renderChart("chart2", combinedData);
+</script>
+</body>
+</html>

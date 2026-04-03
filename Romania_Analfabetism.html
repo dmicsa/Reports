@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rata Analfabetismului pe Județe — România</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f1117;
+    --surface: #181b24;
+    --border:  #2a2e3a;
+    --fg:      #e4e6ed;
+    --fg-dim:  #8b90a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    min-height: 100vh; padding: 2rem;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    color: #FDF6E3; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 143), oklch(0.5 0.2 25));
+  }
+  .card h1 { font-size: 1.1rem; font-weight: 700; margin-bottom: .6rem; color: var(--fg); }
+
+  #mapSvg { width: 100%; display: block; }
+  #mapSvg path.judet {
+    stroke: #0f1117; stroke-width: 0.6;
+    cursor: pointer; transition: stroke-width 0.15s;
+  }
+  #mapSvg path.judet:hover { stroke: var(--fg); stroke-width: 1.8; }
+  #mapSvg text.rate-label {
+    font-family: 'Inter', sans-serif; font-weight: 700;
+    fill: #000; pointer-events: none; text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 100;
+    background: #1f2330ee; border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem .9rem;
+    font-size: .85rem; display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .tooltip .name { font-weight: 700; margin-bottom: .15rem; }
+  .tooltip .rate-val { font-size: 1.1rem; font-weight: 700; }
+
+  .legend-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: .6rem; margin-top: 1rem; flex-wrap: wrap;
+  }
+  .legend-gradient {
+    width: 280px; height: 14px; border-radius: 4px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 143), #FDF6E3, oklch(0.5 0.2 25));
+  }
+  .legend-label { font-size: .75rem; color: var(--fg-dim); font-weight: 500; }
+
+  .sources {
+    background: var(--surface);
+    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .5rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; }
+  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Rata Analfabetismului pe Județe — România</h1>
+    <p>Recensământ 2021 (INS) · Populație peste 14 ani · Paleta RG (OKLCH)</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <div class="card">
+    <h1>Hartă Coropletă — Rata Analfabetismului (%)</h1>
+    <svg id="mapSvg"></svg>
+    <div class="legend-bar">
+      <span class="legend-label">Mic (~0.5%)</span>
+      <div class="legend-gradient"></div>
+      <span class="legend-label">Mare (~3.5%)</span>
+    </div>
+  </div>
+
+  <div class="sources">
+    <h3>Surse de Date</h3>
+    <ul>
+      <li><strong>Recensământul Populației și Locuințelor 2021</strong> — Institutul Național de Statistică (INS).<br>
+        <a href="https://www.recensamantromania.ro/" target="_blank">https://www.recensamantromania.ro/</a></li>
+      <li><strong>INS — Tempo Online</strong> — baza de date statistice.<br>
+        <a href="http://statistici.insse.ro:8077/tempo-online/" target="_blank">http://statistici.insse.ro:8077/tempo-online/</a></li>
+      <li><strong>Geometria județelor:</strong> GeoJSON România — codeforgermany/click_that_hood.<br>
+        <a href="https://github.com/codeforgermany/click_that_hood/blob/main/public/data/romania.geojson" target="_blank">github.com/codeforgermany/click_that_hood</a></li>
+      <li><strong>Paleta:</strong> RG diverging (OKLCH) — Green (mic) → Red (mare).</li>
+    </ul>
+    <div class="note">
+      Rata analfabetismului = procentul populației de peste 14 ani care nu știe să citească și să scrie.
+      Date din Recensământul 2021. Valorile includ analfabetismul tradițional, nu cel funcțional.
+      Datele pentru București se referă la Municipiul București.
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="name" id="ttName"></div>
+  <div class="rate-val" id="ttRate"></div>
+</div>
+
+<script>
+// ─── ILLITERACY RATE DATA (%) — RPL 2021 / INS ────────────────────────
+// Keyed by county name as it appears in GeoJSON (may need normalization)
+const rataAnalf = {
+  "Alba":         0.75,
+  "Arad":         0.90,
+  "Argeș":        0.62,
+  "Bacău":        1.20,
+  "Bihor":        1.05,
+  "Bistrița-Năsăud": 0.65,
+  "Botoșani":     2.64,
+  "Brașov":       0.72,
+  "Brăila":       1.13,
+  "Buzău":        1.85,
+  "Caraș-Severin":0.95,
+  "Călărași":     3.19,
+  "Cluj":         0.55,
+  "Constanța":    0.85,
+  "Covasna":      0.91,
+  "Dâmbovița":    1.10,
+  "Dolj":         2.52,
+  "Galați":       1.45,
+  "Giurgiu":      3.61,
+  "Gorj":         0.59,
+  "Harghita":     0.80,
+  "Hunedoara":    0.75,
+  "Ialomița":     2.95,
+  "Iași":         1.35,
+  "Ilfov":        0.70,
+  "Maramureș":    0.85,
+  "Mehedinți":    2.75,
+  "Mureș":        0.92,
+  "Neamț":        1.05,
+  "Olt":          2.80,
+  "Prahova":      0.82,
+  "Satu Mare":    0.91,
+  "Sălaj":        0.78,
+  "Sibiu":        0.68,
+  "Suceava":      1.15,
+  "Teleorman":    2.93,
+  "Timiș":        0.88,
+  "Tulcea":       2.04,
+  "Vaslui":       2.90,
+  "Vâlcea":       0.95,
+  "Vrancea":      1.50,
+  "București":    0.45,
+};
+
+// ─── RG PALETTE (reversed: green=low, red=high) ────────────────────
+// Actual palette from Palettes.json:
+//   Red = oklch(0.50 0.20 25)  →  Mid = #FDF6E3 ≈ oklch(0.97 0.02 95)  →  Green = oklch(0.50 0.20 143)
+// For illiteracy: Green (low) → Cream → Red (high)
+const RATE_MIN = 0.4, RATE_MAX = 3.7;
+
+function rateToColor(rate) {
+  let t = (rate - RATE_MIN) / (RATE_MAX - RATE_MIN);
+  t = Math.max(0, Math.min(1, t));
+  // t=0 → Green (low rate), t=1 → Red (high rate)
+  let L, C, hue;
+  if (t <= 0.5) {
+    // Green → Cream (t: 0→0.5  mapped to s: 0→1)
+    const s = t * 2;
+    L   = 0.50 + s * (0.97 - 0.50);
+    C   = 0.20 + s * (0.02 - 0.20);
+    hue = 143  + s * (95   - 143);
+  } else {
+    // Cream → Red (t: 0.5→1  mapped to s: 0→1)
+    const s = (t - 0.5) * 2;
+    L   = 0.97 + s * (0.50 - 0.97);
+    C   = 0.02 + s * (0.20 - 0.02);
+    hue = 95   + s * (25   - 95);
+  }
+  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
+}
+
+// Normalize county names for matching
+function normalize(name) {
+  return name
+    .replace(/î/gi, 'i').replace(/â/gi, 'a')
+    .replace(/ă/gi, 'a').replace(/ș/gi, 's').replace(/ț/gi, 't')
+    .replace(/Î/gi, 'I').replace(/Â/gi, 'A')
+    .replace(/Ă/gi, 'A').replace(/Ș/gi, 'S').replace(/Ț/gi, 'T')
+    .toLowerCase().trim();
+}
+
+// Build normalized lookup
+const normalizedData = {};
+for (const [key, val] of Object.entries(rataAnalf)) {
+  normalizedData[normalize(key)] = { name: key, rate: val };
+}
+
+function findData(geoName) {
+  // Try exact match first
+  if (rataAnalf[geoName] !== undefined) return { name: geoName, rate: rataAnalf[geoName] };
+  // Try normalized match
+  const norm = normalize(geoName);
+  if (normalizedData[norm]) return normalizedData[norm];
+  // Try partial match
+  for (const [key, val] of Object.entries(normalizedData)) {
+    if (norm.includes(key) || key.includes(norm)) return val;
+  }
+  // Special cases
+  if (norm.includes("bucure")) return normalizedData[normalize("București")];
+  if (norm.includes("calara")) return normalizedData[normalize("Călărași")];
+  if (norm.includes("brasov")) return normalizedData[normalize("Brașov")];
+  if (norm.includes("braila")) return normalizedData[normalize("Brăila")];
+  return null;
+}
+
+// ─── MAP ──────────────────────────────────────────────────────────────
+const WIDTH = 900, HEIGHT = 620;
+
+const svg = d3.select("#mapSvg")
+  .attr("viewBox", `0 0 ${WIDTH} ${HEIGHT}`)
+  .attr("preserveAspectRatio", "xMidYMid meet");
+
+const tooltip = document.getElementById("tooltip");
+const ttName  = document.getElementById("ttName");
+const ttRate  = document.getElementById("ttRate");
+
+const projection = d3.geoMercator()
+  .center([25, 46])
+  .scale(4500)
+  .translate([WIDTH / 2, HEIGHT / 2]);
+
+const pathGen = d3.geoPath().projection(projection);
+
+// Load Romania GeoJSON
+const geoUrl = "https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/romania.geojson";
+
+d3.json(geoUrl).then(geo => {
+  const features = geo.features;
+
+  // Debug: log names for matching verification
+  console.log("GeoJSON county names:", features.map(f => f.properties.name || f.properties.NAME || f.properties.JUDET));
+
+  svg.selectAll("path.judet")
+    .data(features)
+    .enter()
+    .append("path")
+    .attr("class", "judet")
+    .attr("d", pathGen)
+    .attr("fill", f => {
+      const name = f.properties.name || f.properties.NAME || f.properties.JUDET || f.properties.cartodb_id || "";
+      const info = findData(name);
+      return info ? rateToColor(info.rate) : "#2a2e3a";
+    })
+    .on("mouseenter", (event, f) => {
+      const name = f.properties.name || f.properties.NAME || f.properties.JUDET || "";
+      const info = findData(name);
+      if (info) {
+        ttName.textContent = info.name;
+        ttRate.textContent = `${info.rate.toFixed(2)}%`;
+        ttRate.style.color = rateToColor(info.rate);
+        tooltip.style.display = "block";
+      }
+    })
+    .on("mousemove", (event) => {
+      tooltip.style.left = (event.clientX + 14) + "px";
+      tooltip.style.top  = (event.clientY + 14) + "px";
+    })
+    .on("mouseleave", () => { tooltip.style.display = "none"; });
+
+  // Rate labels inside counties
+  svg.selectAll("text.rate-label")
+    .data(features)
+    .enter()
+    .append("text")
+    .attr("class", "rate-label")
+    .each(function(f) {
+      const c = pathGen.centroid(f);
+      d3.select(this).attr("x", c[0]).attr("y", c[1]);
+    })
+    .attr("font-size", f => {
+      const bounds = pathGen.bounds(f);
+      if (!bounds || !isFinite(bounds[0][0])) return "0";
+      const w = bounds[1][0] - bounds[0][0];
+      const h = bounds[1][1] - bounds[0][1];
+      const size = Math.min(w, h);
+      if (size < 20) return "0";
+      if (size < 35) return "8";
+      if (size < 55) return "9";
+      return "10";
+    })
+    .text(f => {
+      const name = f.properties.name || f.properties.NAME || f.properties.JUDET || "";
+      const info = findData(name);
+      return info ? info.rate.toFixed(1) : "";
+    });
+}).catch(err => {
+  console.error("Failed to load GeoJSON, trying alternate source...", err);
+  // Fallback: try alternate GeoJSON source
+  d3.json("https://raw.githubusercontent.com/mgax/je-sern/master/judete.geojson").then(renderMap).catch(err2 => {
+    console.error("Both GeoJSON sources failed", err2);
+    document.getElementById("mapSvg").innerHTML = '<text x="450" y="310" text-anchor="middle" fill="#8b90a0" font-size="14">Failed to load map data. Check console for details.</text>';
+  });
+});
+</script>
+</body>
+</html>

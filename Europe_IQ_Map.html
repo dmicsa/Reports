@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Average IQ Map of Europe</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f1117;
+    --surface: #181b24;
+    --border:  #2a2e3a;
+    --fg:      #e4e6ed;
+    --fg-dim:  #8b90a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    min-height: 100vh; padding: 2rem;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    color: #FDF6E3; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
+  }
+  .card h1 { font-size: 1.1rem; font-weight: 700; margin-bottom: .6rem; color: var(--fg); }
+
+  #mapSvg { width: 100%; display: block; }
+  #mapSvg path.country {
+    stroke: #0f1117; stroke-width: 0.4;
+    cursor: pointer; transition: stroke-width 0.15s;
+  }
+  #mapSvg path.country:hover { stroke: var(--fg); stroke-width: 1.2; }
+  #mapSvg text.iq-label {
+    font-family: 'Inter', sans-serif; font-weight: 700;
+    fill: #000; pointer-events: none; text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 100;
+    background: #1f2330ee; border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem .9rem;
+    font-size: .85rem; display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .tooltip .name { font-weight: 700; margin-bottom: .15rem; }
+  .tooltip .iq-val { font-size: 1.1rem; font-weight: 700; }
+
+  .legend-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: .6rem; margin-top: 1rem; flex-wrap: wrap;
+  }
+  .legend-gradient {
+    width: 260px; height: 14px; border-radius: 4px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143));
+  }
+  .legend-label { font-size: .75rem; color: var(--fg-dim); font-weight: 500; }
+
+  .sources {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .5rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; }
+  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Average IQ Map of Europe</h1>
+    <p>Estimated national IQ by country, RG diverging palette (OKLCH)</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <div class="card">
+    <h1>Choropleth Map — Average National IQ</h1>
+    <svg id="mapSvg"></svg>
+    <div class="legend-bar">
+      <span class="legend-label">Low IQ (~90)</span>
+      <div class="legend-gradient"></div>
+      <span class="legend-label">High IQ (~102)</span>
+    </div>
+  </div>
+
+  <div class="sources">
+    <h3>Data Sources</h3>
+    <ul>
+      <li><strong>IQ estimates:</strong> Lynn, R. & Vanhanen, T. (2012). "Intelligence: A Unifying Construct for the Social Sciences."
+        Updated with Becker, D. (2019). "The NIQ Dataset" v1.3.3.<br>
+        <a href="https://viewoniq.org/" target="_blank">https://viewoniq.org/</a></li>
+      <li><strong>World Population Review</strong> — Average IQ by Country 2025.<br>
+        <a href="https://worldpopulationreview.com/country-rankings/average-iq-by-country" target="_blank">https://worldpopulationreview.com/country-rankings/average-iq-by-country</a></li>
+      <li><strong>Map geometry:</strong> Natural Earth 50m countries via TopoJSON CDN.<br>
+        <a href="https://github.com/topojson/world-atlas" target="_blank">https://github.com/topojson/world-atlas</a></li>
+      <li><strong>Palette:</strong> RG diverging palette (OKLCH perceptual color space) from the author's Palettes.json.<br>
+        Red oklch(0.5, 0.2, 25°) → Green oklch(0.5, 0.2, 143°)</li>
+    </ul>
+    <div class="note">
+      National IQ estimates are controversial and methodologically debated. They represent broad averages from
+      various psychometric studies and may be influenced by education access, nutrition, socioeconomic factors,
+      and sampling methodology. Values should be interpreted with caution.
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="name" id="ttName"></div>
+  <div class="iq-val" id="ttIQ"></div>
+</div>
+
+<script>
+// ─── IQ DATA keyed by ISO 3166-1 NUMERIC code (string) ────────────────
+// This matches the world-atlas TopoJSON feature IDs directly
+const iqByNumeric = {
+  "8":   {name:"Albania",          iq:90},
+  "40":  {name:"Austria",          iq:100},
+  "112": {name:"Belarus",          iq:101},
+  "56":  {name:"Belgium",          iq:99},
+  "70":  {name:"Bosnia & Herz.",   iq:93},
+  "100": {name:"Bulgaria",         iq:93},
+  "191": {name:"Croatia",          iq:97},
+  "196": {name:"Cyprus",           iq:92},
+  "203": {name:"Czechia",          iq:98},
+  "208": {name:"Denmark",          iq:99},
+  "233": {name:"Estonia",          iq:100},
+  "246": {name:"Finland",          iq:101},
+  "250": {name:"France",           iq:98},
+  "276": {name:"Germany",          iq:100},
+  "300": {name:"Greece",           iq:93},
+  "348": {name:"Hungary",          iq:99},
+  "352": {name:"Iceland",          iq:99},
+  "372": {name:"Ireland",          iq:98},
+  "380": {name:"Italy",            iq:97},
+  "383": {name:"Kosovo",           iq:90},
+  "428": {name:"Latvia",           iq:98},
+  "440": {name:"Lithuania",        iq:96},
+  "442": {name:"Luxembourg",       iq:99},
+  "807": {name:"N. Macedonia",     iq:90},
+  "470": {name:"Malta",            iq:95},
+  "498": {name:"Moldova",          iq:90},
+  "499": {name:"Montenegro",       iq:90},
+  "528": {name:"Netherlands",      iq:100},
+  "578": {name:"Norway",           iq:99},
+  "616": {name:"Poland",           iq:99},
+  "620": {name:"Portugal",         iq:95},
+  "642": {name:"Romania",          iq:94},
+  "688": {name:"Serbia",           iq:92},
+  "703": {name:"Slovakia",         iq:98},
+  "705": {name:"Slovenia",         iq:98},
+  "724": {name:"Spain",            iq:94},
+  "752": {name:"Sweden",           iq:99},
+  "756": {name:"Switzerland",      iq:101},
+  "792": {name:"Turkey",           iq:90},
+  "804": {name:"Ukraine",          iq:95},
+  "826": {name:"United Kingdom",   iq:100},
+  "643": {name:"Russia",           iq:97},
+};
+
+// Set of all numeric IDs we care about
+const euroIds = new Set(Object.keys(iqByNumeric));
+
+// ─── RG PALETTE (OKLCH) ───────────────────────────────────────────────
+// Actual palette from Palettes.json:
+//   Red = oklch(0.50 0.20 25)  →  Mid = #FDF6E3 ≈ oklch(0.97 0.02 95)  →  Green = oklch(0.50 0.20 143)
+// Data range set to actual data bounds for maximum color differentiation
+const IQ_MIN = 90, IQ_MAX = 101;
+
+// Piecewise interpolation through the 3 palette stops
+function iqToColor(iq) {
+  let t = (iq - IQ_MIN) / (IQ_MAX - IQ_MIN);
+  t = Math.max(0, Math.min(1, t));
+  let L, C, hue;
+  if (t <= 0.5) {
+    // Red → Cream (t: 0→0.5  mapped to s: 0→1)
+    const s = t * 2;
+    L   = 0.50 + s * (0.97 - 0.50);  // 0.50 → 0.97
+    C   = 0.20 + s * (0.02 - 0.20);  // 0.20 → 0.02
+    hue = 25   + s * (95   - 25);    // 25   → 95
+  } else {
+    // Cream → Green (t: 0.5→1  mapped to s: 0→1)
+    const s = (t - 0.5) * 2;
+    L   = 0.97 + s * (0.50 - 0.97);  // 0.97 → 0.50
+    C   = 0.02 + s * (0.20 - 0.02);  // 0.02 → 0.20
+    hue = 95   + s * (143  - 95);    // 95   → 143
+  }
+  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
+}
+
+function getInfo(feature) {
+  return iqByNumeric[String(feature.id)] || null;
+}
+
+// ─── MAP SETUP ────────────────────────────────────────────────────────
+const WIDTH = 900, HEIGHT = 650;
+
+const svg = d3.select("#mapSvg")
+  .attr("viewBox", `0 0 ${WIDTH} ${HEIGHT}`)
+  .attr("preserveAspectRatio", "xMidYMid meet");
+
+const tooltip = document.getElementById("tooltip");
+const ttName  = document.getElementById("ttName");
+const ttIQ    = document.getElementById("ttIQ");
+
+// Azimuthal equal-area centered on Europe — good for choropleth
+const projection = d3.geoAzimuthalEqualArea()
+  .center([0, 0])
+  .rotate([-15, -52, 0])
+  .scale(850)
+  .translate([WIDTH / 2, HEIGHT / 2])
+  .clipExtent([[0, 0], [WIDTH, HEIGHT]]);
+
+const pathGen = d3.geoPath().projection(projection);
+
+// Custom centroid overrides for countries where the projected centroid
+// is off-screen or misleading (overseas territories, large landmass, etc.)
+const centroidOverrides = {
+  "250": [2, 47],      // France → metropolitan France
+  "643": [40, 55],     // Russia → European Russia
+  "578": [10, 62],     // Norway → mainland Norway
+  "208": [10, 56],     // Denmark → mainland
+  "826": [-2, 54],     // UK → Great Britain center
+  "724": [-3, 40],     // Spain → mainland
+  "620": [-8, 39.5],   // Portugal
+  "380": [12, 43],     // Italy
+  "352": [-19, 65],    // Iceland
+  "792": [35, 39],     // Turkey
+};
+
+function getLabelPos(f) {
+  const id = String(f.id);
+  if (centroidOverrides[id]) {
+    const projected = projection(centroidOverrides[id]);
+    return projected || pathGen.centroid(f);
+  }
+  return pathGen.centroid(f);
+}
+
+// ─── LOAD & RENDER ────────────────────────────────────────────────────
+d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json").then(world => {
+  const allCountries = topojson.feature(world, world.objects.countries);
+
+  // Debug: log all feature IDs to console so we can verify matching
+  console.log("All feature IDs:", allCountries.features.map(f => f.id));
+  console.log("Our euroIds:", [...euroIds]);
+  console.log("Matched:", allCountries.features.filter(f => euroIds.has(String(f.id))).map(f => f.id));
+
+  // Include: (1) any country with IQ data, OR (2) nearby countries for context
+  const euroFeatures = allCountries.features.filter(f => {
+    const id = String(f.id);
+    if (euroIds.has(id)) return true;
+    // Include neighbors for visual context (rendered grey)
+    // Check if any part of the geometry is in the European bounding box
+    const bounds = pathGen.bounds(f);
+    if (!bounds || !isFinite(bounds[0][0])) return false;
+    // If the country renders on screen, include it
+    const [x0, y0] = bounds[0];
+    const [x1, y1] = bounds[1];
+    const area = (x1 - x0) * (y1 - y0);
+    return area > 50 && x0 < WIDTH && x1 > 0 && y0 < HEIGHT && y1 > 0;
+  });
+
+  // Draw countries
+  svg.selectAll("path.country")
+    .data(euroFeatures)
+    .enter()
+    .append("path")
+    .attr("class", "country")
+    .attr("d", pathGen)
+    .attr("fill", f => {
+      const info = getInfo(f);
+      return info ? iqToColor(info.iq) : "#2a2e3a";
+    })
+    .on("mouseenter", (event, f) => {
+      const info = getInfo(f);
+      if (info) {
+        ttName.textContent = info.name;
+        ttIQ.textContent = `IQ ≈ ${info.iq}`;
+        ttIQ.style.color = iqToColor(info.iq);
+        tooltip.style.display = "block";
+      }
+    })
+    .on("mousemove", (event) => {
+      tooltip.style.left = (event.clientX + 14) + "px";
+      tooltip.style.top  = (event.clientY + 14) + "px";
+    })
+    .on("mouseleave", () => { tooltip.style.display = "none"; });
+
+  // IQ labels — only for countries with data
+  const labelFeatures = euroFeatures.filter(f => getInfo(f));
+
+  svg.selectAll("text.iq-label")
+    .data(labelFeatures)
+    .enter()
+    .append("text")
+    .attr("class", "iq-label")
+    .each(function(f) {
+      const pos = getLabelPos(f);
+      d3.select(this)
+        .attr("x", pos[0])
+        .attr("y", pos[1]);
+    })
+    .attr("font-size", f => {
+      const bounds = pathGen.bounds(f);
+      if (!bounds || !isFinite(bounds[0][0])) return "0";
+      const w = bounds[1][0] - bounds[0][0];
+      const h = bounds[1][1] - bounds[0][1];
+      const size = Math.min(w, h);
+      if (size < 12) return "0";
+      if (size < 20) return "7";
+      if (size < 35) return "9";
+      if (size < 55) return "10";
+      return "12";
+    })
+    .text(f => {
+      const info = getInfo(f);
+      return info ? info.iq : "";
+    });
+});
+</script>
+</body>
+</html>

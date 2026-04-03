@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OECD GDP Report — All 38 Member States</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f1117;
+    --surface: #181b24;
+    --border:  #2a2e3a;
+    --fg:      #e4e6ed;
+    --fg-dim:  #8b90a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg); color: var(--fg);
+    min-height: 100vh; padding: 2rem;
+  }
+  .container { max-width: 98vw; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    color: #FDF6E3; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
+    position: relative; overflow-x: auto;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; font-size: .82rem;
+    white-space: nowrap;
+  }
+  thead th {
+    background: #1e2130; position: sticky; top: 0;
+    padding: .65rem .6rem; text-align: right;
+    border-bottom: 2px solid var(--border);
+    cursor: pointer; user-select: none;
+    color: var(--fg-dim); font-weight: 600; font-size: .72rem;
+    text-transform: uppercase; letter-spacing: .04em;
+    transition: color 0.15s;
+  }
+  thead th:hover { color: var(--fg); }
+  thead th:first-child { text-align: left; }
+  thead th .arrow { font-size: .65rem; margin-left: .2rem; opacity: 0.4; }
+  thead th.sorted .arrow { opacity: 1; color: oklch(0.6 0.15 143); }
+  thead th.sorted { color: var(--fg); }
+
+  tbody td {
+    padding: .55rem .6rem; text-align: right;
+    border-bottom: 1px solid #1e222e;
+  }
+  tbody td:first-child {
+    text-align: left; font-weight: 600; color: var(--fg);
+    position: sticky; left: 0; background: var(--surface); z-index: 1;
+  }
+  tbody tr:hover td { background: #1c2035; }
+  tbody tr:hover td:first-child { background: #1c2035; }
+
+  .score-cell {
+    font-weight: 800; font-size: .95rem;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  .legend-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: .5rem; margin: 1rem 0 0; flex-wrap: wrap;
+  }
+  .legend-gradient {
+    width: 200px; height: 12px; border-radius: 4px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143));
+  }
+  .legend-label { font-size: .7rem; color: var(--fg-dim); font-weight: 500; }
+
+  .sources {
+    background: var(--surface);
+    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; }
+  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
+  }
+
+  /* SVG chart */
+  .chart-section { margin-top: 1.5rem; }
+  .chart-section h2 {
+    font-size: 1rem; font-weight: 700; margin-bottom: 1rem;
+    color: var(--fg);
+  }
+  .chart-container { width: 100%; overflow-x: auto; }
+  svg .bar-rect { cursor: pointer; transition: opacity 0.15s; }
+  svg .bar-rect:hover { opacity: 0.8; }
+
+  .tooltip-chart {
+    position: fixed; pointer-events: none; z-index: 100;
+    background: #1f2330ee; border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem .9rem;
+    font-size: .85rem; display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .tooltip-chart .tt-name { font-weight: 700; margin-bottom: .15rem; }
+  .tooltip-chart .tt-vals { font-size: .8rem; color: var(--fg-dim); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>OECD GDP Report — All 38 Member States</h1>
+    <p>IMF World Economic Outlook, October 2025 · Nominal & PPP GDP, per capita, population, growth</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <div class="card">
+    <table id="gdpTable">
+      <thead><tr id="headerRow"></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="legend-bar">
+      <span class="legend-label">Lower</span>
+      <div class="legend-gradient"></div>
+      <span class="legend-label">Higher</span>
+    </div>
+  </div>
+
+  <!-- Bar chart: GDP per capita PPP -->
+  <div class="card chart-section">
+    <h2>GDP per Capita (PPP) — Bar Chart</h2>
+    <div class="chart-container">
+      <svg id="chartSvg"></svg>
+    </div>
+  </div>
+
+  <div class="sources">
+    <h3>Data Sources</h3>
+    <ul>
+      <li><strong>IMF World Economic Outlook</strong> (October 2025) — GDP, GDP per capita (nominal & PPP), population, growth rate.<br>
+        <a href="https://www.imf.org/en/Publications/WEO" target="_blank">imf.org/WEO</a></li>
+      <li><strong>OECD Economic Outlook No. 118</strong> (December 2025) — GDP growth rate forecasts 2025–2026.<br>
+        <a href="https://www.oecd.org/en/publications/oecd-economic-outlook_16097408.html" target="_blank">oecd.org/economic-outlook</a></li>
+      <li><strong>World Bank Open Data</strong> — cross-referenced for validation.<br>
+        <a href="https://data.worldbank.org/" target="_blank">data.worldbank.org</a></li>
+    </ul>
+    <div class="note">
+      <strong>Note:</strong> GDP (nominal) is in current US dollars. GDP (PPP) is in current international dollars, adjusting for
+      purchasing power differences. Population is mid-year 2025 estimate. Growth rate is real GDP % change y/y (2025 estimate).
+      Ireland and Luxembourg show very high GDP per capita due to multinational corporations' profits being counted domestically.
+    </div>
+  </div>
+</div>
+
+<div class="tooltip-chart" id="tooltip">
+  <div class="tt-name" id="ttName"></div>
+  <div class="tt-vals" id="ttVals"></div>
+</div>
+
+<script>
+// ─── COLUMN DEFINITIONS ───────────────────────────────────────────────
+const columns = [
+  {key:"name",      label:"Country",         unit:"",     fmt:s=>s, higherBetter:null, sortable:false},
+  {key:"gdpNom",    label:"GDP Nominal",     unit:"$B",   fmt:v=>v>=1000?(v/1000).toFixed(2)+"T":v.toFixed(0), higherBetter:true},
+  {key:"gdpPPP",    label:"GDP PPP",         unit:"$B",   fmt:v=>v>=1000?(v/1000).toFixed(2)+"T":v.toFixed(0), higherBetter:true},
+  {key:"pop",       label:"Population",      unit:"M",    fmt:v=>v.toFixed(1), higherBetter:null},
+  {key:"pcNom",     label:"GDP/cap Nom.",    unit:"$",    fmt:v=>"$"+Math.round(v).toLocaleString(), higherBetter:true},
+  {key:"pcPPP",     label:"GDP/cap PPP",     unit:"$",    fmt:v=>"$"+Math.round(v).toLocaleString(), higherBetter:true},
+  {key:"growth25",  label:"Growth 2025",     unit:"%",    fmt:v=>v.toFixed(1)+"%", higherBetter:true},
+  {key:"growth26",  label:"Growth 2026",     unit:"%",    fmt:v=>v.toFixed(1)+"%", higherBetter:true},
+  {key:"pppRatio",  label:"PPP/Nom. Ratio",  unit:"",     fmt:v=>v.toFixed(2), higherBetter:null},
+];
+
+// ─── DATA ─────────────────────────────────────────────────────────────
+// IMF WEO October 2025, OECD Economic Outlook December 2025
+// GDP nom/PPP in billions USD/int$, pop in millions, pcNom/pcPPP in USD/int$ per person
+const data = [
+  //                      nom$B   ppp$B   popM    pcNom   pcPPP   g25  g26
+  {name:"Australia",      gdpNom:1824, gdpPPP:1810, pop:26.7, pcNom:69360, pcPPP:73360, growth25:1.9, growth26:2.3},
+  {name:"Austria",        gdpNom:590,  gdpPPP:689,  pop:9.2,  pcNom:65640, pcPPP:76590, growth25:0.8, growth26:1.3},
+  {name:"Belgium",        gdpNom:743,  gdpPPP:907,  pop:11.7, pcNom:63900, pcPPP:77700, growth25:1.0, growth26:1.2},
+  {name:"Canada",         gdpNom:2284, gdpPPP:2653, pop:40.1, pcNom:58240, pcPPP:67710, growth25:1.5, growth26:1.0},
+  {name:"Chile",          gdpNom:358,  gdpPPP:720,  pop:19.8, pcNom:17880, pcPPP:36430, growth25:2.3, growth26:2.2},
+  {name:"Colombia",       gdpNom:450,  gdpPPP:1195, pop:52.3, pcNom:8640,  pcPPP:23160, growth25:2.7, growth26:2.9},
+  {name:"Costa Rica",     gdpNom:107,  gdpPPP:175,  pop:5.3,  pcNom:20130, pcPPP:32830, growth25:3.8, growth26:3.5},
+  {name:"Czech Republic", gdpNom:336,  gdpPPP:682,  pop:10.9, pcNom:38370, pcPPP:62340, growth25:2.1, growth26:2.5},
+  {name:"Denmark",        gdpNom:484,  gdpPPP:518,  pop:5.9,  pcNom:82710, pcPPP:87540, growth25:2.1, growth26:1.8},
+  {name:"Estonia",        gdpNom:43,   gdpPPP:76,   pop:1.4,  pcNom:31820, pcPPP:55270, growth25:1.8, growth26:2.8},
+  {name:"Finland",        gdpNom:307,  gdpPPP:377,  pop:5.6,  pcNom:55400, pcPPP:67610, growth25:0.8, growth26:1.5},
+  {name:"France",         gdpNom:3362, gdpPPP:4710, pop:68.3, pcNom:49250, pcPPP:69450, growth25:0.9, growth26:1.0},
+  {name:"Germany",        gdpNom:5014, gdpPPP:5870, pop:83.8, pcNom:59830, pcPPP:78570, growth25:0.3, growth26:0.8},
+  {name:"Greece",         gdpNom:249,  gdpPPP:467,  pop:10.3, pcNom:24120, pcPPP:44790, growth25:2.1, growth26:2.0},
+  {name:"Hungary",        gdpNom:215,  gdpPPP:523,  pop:9.6,  pcNom:22470, pcPPP:52900, growth25:1.8, growth26:2.8},
+  {name:"Iceland",        gdpNom:32,   gdpPPP:31,   pop:0.4,  pcNom:82230, pcPPP:82230, growth25:2.0, growth26:2.3},
+  {name:"Ireland",        gdpNom:555,  gdpPPP:710,  pop:5.3,  pcNom:106340,pcPPP:141120,growth25:3.5, growth26:3.2},
+  {name:"Israel",         gdpNom:564,  gdpPPP:668,  pop:10.0, pcNom:56730, pcPPP:69570, growth25:3.4, growth26:3.8},
+  {name:"Italy",          gdpNom:2544, gdpPPP:3390, pop:58.8, pcNom:43270, pcPPP:57010, growth25:0.9, growth26:0.9},
+  {name:"Japan",          gdpNom:4280, gdpPPP:7105, pop:123.3,pcNom:34710, pcPPP:56440, growth25:1.3, growth26:0.5},
+  {name:"Korea",          gdpNom:1868, gdpPPP:3480, pop:51.7, pcNom:36150, pcPPP:67550, growth25:1.2, growth26:1.8},
+  {name:"Latvia",         gdpNom:52,   gdpPPP:82,   pop:1.8,  pcNom:27960, pcPPP:44980, growth25:2.4, growth26:2.8},
+  {name:"Lithuania",      gdpNom:84,   gdpPPP:156,  pop:2.9,  pcNom:29640, pcPPP:55590, growth25:2.5, growth26:2.8},
+  {name:"Luxembourg",     gdpNom:96,   gdpPPP:103,  pop:0.7,  pcNom:142860,pcPPP:157690,growth25:1.8, growth26:2.2},
+  {name:"Mexico",         gdpNom:1850, gdpPPP:3270, pop:131.0,pcNom:14120, pcPPP:25270, growth25:0.4, growth26:1.2},
+  {name:"Netherlands",    gdpNom:1220, gdpPPP:1435, pop:17.8, pcNom:68540, pcPPP:79270, growth25:1.4, growth26:1.3},
+  {name:"New Zealand",    gdpNom:263,  gdpPPP:315,  pop:5.3,  pcNom:49310, pcPPP:62110, growth25:1.3, growth26:2.1},
+  {name:"Norway",         gdpNom:526,  gdpPPP:477,  pop:5.6,  pcNom:94330, pcPPP:85950, growth25:1.7, growth26:1.5},
+  {name:"Poland",         gdpNom:842,  gdpPPP:1950, pop:37.6, pcNom:22400, pcPPP:50670, growth25:3.5, growth26:3.4},
+  {name:"Portugal",       gdpNom:298,  gdpPPP:500,  pop:10.3, pcNom:28940, pcPPP:48010, growth25:2.2, growth26:2.0},
+  {name:"Slovak Republic",gdpNom:135,  gdpPPP:266,  pop:5.4,  pcNom:24860, pcPPP:49040, growth25:2.3, growth26:2.5},
+  {name:"Slovenia",       gdpNom:74,   gdpPPP:116,  pop:2.1,  pcNom:34850, pcPPP:53230, growth25:2.5, growth26:2.3},
+  {name:"Spain",          gdpNom:1870, gdpPPP:2430, pop:48.1, pcNom:38880, pcPPP:50750, growth25:2.8, growth26:2.2},
+  {name:"Sweden",         gdpNom:657,  gdpPPP:757,  pop:10.6, pcNom:62080, pcPPP:72130, growth25:1.9, growth26:2.2},
+  {name:"Switzerland",    gdpNom:912,  gdpPPP:873,  pop:9.0,  pcNom:101330,pcPPP:97940, growth25:1.3, growth26:1.5},
+  {name:"Türkiye",        gdpNom:1297, gdpPPP:3790, pop:86.3, pcNom:15030, pcPPP:43590, growth25:3.0, growth26:3.1},
+  {name:"United Kingdom", gdpNom:3959, gdpPPP:4540, pop:68.3, pcNom:57980, pcPPP:65220, growth25:1.4, growth26:1.0},
+  {name:"United States",  gdpNom:29800,gdpPPP:29800,pop:340.0,pcNom:87650, pcPPP:89200, growth25:2.0, growth26:1.5},
+];
+
+// Compute PPP/Nominal ratio
+data.forEach(d => { d.pppRatio = d.pcPPP / d.pcNom; });
+
+// ─── RG PALETTE (OKLCH) ──────────────────────────────────────────────
+function scoreToColor(val, min, max) {
+  if (max === min) return "var(--fg-dim)";
+  let t = (val - min) / (max - min);
+  t = Math.max(0, Math.min(1, t));
+  let L, C, hue;
+  if (t <= 0.5) {
+    const s = t * 2;
+    L   = 0.50 + s * (0.97 - 0.50);
+    C   = 0.20 + s * (0.02 - 0.20);
+    hue = 25   + s * (95   - 25);
+  } else {
+    const s = (t - 0.5) * 2;
+    L   = 0.97 + s * (0.50 - 0.97);
+    C   = 0.02 + s * (0.20 - 0.02);
+    hue = 95   + s * (143  - 95);
+  }
+  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
+}
+
+// ─── TABLE RENDER ─────────────────────────────────────────────────────
+let sortCol = "pcPPP";
+let sortAsc = false;
+
+function getRange(key) {
+  const vals = data.map(d => d[key]).filter(v => typeof v === 'number' && isFinite(v));
+  return { min: Math.min(...vals), max: Math.max(...vals) };
+}
+
+function renderHeaders() {
+  const row = document.getElementById("headerRow");
+  row.innerHTML = "";
+  columns.forEach(col => {
+    const th = document.createElement("th");
+    const isSorted = sortCol === col.key;
+    th.className = isSorted ? "sorted" : "";
+    const arrow = (col.sortable === false) ? "" :
+      `<span class="arrow">${isSorted ? (sortAsc ? "▲" : "▼") : "⇅"}</span>`;
+    th.innerHTML = `${col.label}${col.unit ? " <small>("+col.unit+")</small>" : ""} ${arrow}`;
+    if (col.sortable !== false) {
+      th.onclick = () => {
+        if (sortCol === col.key) sortAsc = !sortAsc;
+        else { sortCol = col.key; sortAsc = col.higherBetter === false; }
+        renderTable();
+      };
+    }
+    row.appendChild(th);
+  });
+}
+
+function renderTable() {
+  renderHeaders();
+  const sorted = [...data].sort((a, b) => {
+    const va = a[sortCol], vb = b[sortCol];
+    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = "";
+
+  sorted.forEach(d => {
+    const tr = document.createElement("tr");
+    columns.forEach(col => {
+      const td = document.createElement("td");
+      const val = d[col.key];
+      if (col.key === "name") {
+        td.textContent = val;
+      } else {
+        td.textContent = col.fmt(val);
+        const range = getRange(col.key);
+        if (col.key === "pppRatio") {
+          // Higher ratio = more purchasing power vs nominal → greenish
+          td.style.color = scoreToColor(val, range.min, range.max);
+        } else if (col.key === "pop") {
+          // Population is neutral — just dim
+          td.style.color = "var(--fg-dim)";
+        } else if (col.higherBetter === true) {
+          td.style.color = scoreToColor(val, range.min, range.max);
+        } else if (col.higherBetter === false) {
+          td.style.color = scoreToColor(val, range.max, range.min);
+        } else {
+          td.style.color = "var(--fg-dim)";
+        }
+        td.style.fontWeight = "600";
+        if (col.key === "pcPPP") {
+          td.className = "score-cell";
+        }
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+renderTable();
+
+// ─── BAR CHART: GDP per Capita PPP ───────────────────────────────────
+const tooltip = document.getElementById("tooltip");
+const ttName  = document.getElementById("ttName");
+const ttVals  = document.getElementById("ttVals");
+
+function renderBarChart() {
+  const sorted = [...data].sort((a,b) => b.pcPPP - a.pcPPP);
+  const N = sorted.length;
+  const margin = {top: 25, right: 20, bottom: 120, left: 55};
+  const groupW = 30;
+  const barW = 22;
+  const totalW = margin.left + N * groupW + margin.right;
+  const plotH = 380;
+  const totalH = margin.top + plotH + margin.bottom;
+
+  const maxV = 160000;
+  function yScale(v) { return margin.top + plotH * (1 - v / maxV); }
+
+  const svg = document.getElementById("chartSvg");
+  svg.setAttribute("viewBox", `0 0 ${totalW} ${totalH}`);
+  svg.setAttribute("width", totalW);
+  svg.setAttribute("height", totalH);
+  svg.style.display = "block";
+  svg.innerHTML = "";
+
+  // Y gridlines
+  for (let v = 0; v <= maxV; v += 20000) {
+    const y = yScale(v);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", margin.left); line.setAttribute("x2", totalW - margin.right);
+    line.setAttribute("y1", y); line.setAttribute("y2", y);
+    line.setAttribute("stroke", v === 0 ? "#8b90a0" : "#2a2e3a");
+    line.setAttribute("stroke-width", v === 0 ? 1.5 : 0.5);
+    svg.appendChild(line);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", margin.left - 6);
+    label.setAttribute("y", y + 4);
+    label.setAttribute("text-anchor", "end");
+    label.setAttribute("fill", "#8b90a0");
+    label.setAttribute("font-size", "9");
+    label.setAttribute("font-family", "Inter, sans-serif");
+    label.textContent = "$" + (v/1000) + "k";
+    svg.appendChild(label);
+  }
+
+  // Bars
+  sorted.forEach((d, i) => {
+    const cx = margin.left + i * groupW + groupW / 2;
+    const x = cx - barW / 2;
+    const barY = yScale(d.pcPPP);
+    const barH = yScale(0) - barY;
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("class", "bar-rect");
+    rect.setAttribute("x", x);
+    rect.setAttribute("y", barY);
+    rect.setAttribute("width", barW);
+    rect.setAttribute("height", Math.max(barH, 1));
+    rect.setAttribute("rx", 2);
+    rect.setAttribute("fill", scoreToColor(d.pcPPP, 20000, 100000));
+    svg.appendChild(rect);
+
+    // Value label
+    const valText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    valText.setAttribute("x", cx);
+    valText.setAttribute("y", barY - 4);
+    valText.setAttribute("text-anchor", "middle");
+    valText.setAttribute("fill", scoreToColor(d.pcPPP, 20000, 100000));
+    valText.setAttribute("font-size", "7");
+    valText.setAttribute("font-weight", "600");
+    valText.setAttribute("font-family", "Inter, sans-serif");
+    valText.textContent = Math.round(d.pcPPP / 1000) + "k";
+    svg.appendChild(valText);
+
+    // Country label
+    const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    lbl.setAttribute("transform", `translate(${cx}, ${margin.top + plotH + 10}) rotate(55)`);
+    lbl.setAttribute("text-anchor", "start");
+    lbl.setAttribute("fill", "#8b90a0");
+    lbl.setAttribute("font-size", "8.5");
+    lbl.setAttribute("font-weight", "600");
+    lbl.setAttribute("font-family", "Inter, sans-serif");
+    lbl.textContent = d.name;
+    svg.appendChild(lbl);
+
+    // Tooltip
+    rect.addEventListener("mouseenter", () => {
+      ttName.textContent = d.name;
+      ttVals.innerHTML = `GDP/cap PPP: <span style="color:${scoreToColor(d.pcPPP,20000,100000)}">$${Math.round(d.pcPPP).toLocaleString()}</span><br>` +
+        `GDP/cap Nom: $${Math.round(d.pcNom).toLocaleString()}<br>` +
+        `GDP Nominal: $${d.gdpNom >= 1000 ? (d.gdpNom/1000).toFixed(2)+"T" : d.gdpNom+"B"}<br>` +
+        `Pop: ${d.pop.toFixed(1)}M · Growth: ${d.growth25.toFixed(1)}%`;
+      tooltip.style.display = "block";
+    });
+    rect.addEventListener("mousemove", (e) => {
+      tooltip.style.left = (e.clientX + 14) + "px";
+      tooltip.style.top  = (e.clientY + 14) + "px";
+    });
+    rect.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+  });
+}
+
+renderBarChart();
+</script>
+</body>
+</html>

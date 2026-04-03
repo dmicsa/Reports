@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OECD GDP Growth Forecast by Nation</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f1117;
+    --surface: #181b24;
+    --border:  #2a2e3a;
+    --fg:      #e4e6ed;
+    --fg-dim:  #8b90a0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg); color: var(--fg);
+    min-height: 100vh; padding: 2rem;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+    color: #FDF6E3; margin-bottom: .4rem;
+  }
+  header p { color: var(--fg-dim); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
+  }
+  .card h2 {
+    font-size: 1rem; font-weight: 700; margin-bottom: 1rem;
+    color: var(--fg);
+  }
+
+  .chart-container { width: 100%; overflow-x: auto; }
+
+  .legend {
+    display: flex; gap: 1.5rem; justify-content: center;
+    margin-bottom: 1rem; flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .8rem; color: var(--fg-dim);
+  }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+  .tooltip-chart {
+    position: fixed; pointer-events: none; z-index: 100;
+    background: #1f2330ee; border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem .9rem;
+    font-size: .85rem; display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .tooltip-chart .name { font-weight: 700; margin-bottom: .15rem; }
+  .tooltip-chart .vals { font-size: .8rem; color: var(--fg-dim); }
+  .tooltip-chart .vals span { font-weight: 600; }
+
+  .sources {
+    background: var(--surface);
+    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
+  }
+  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
+  .sources ul { list-style: none; padding: 0; }
+  .sources li {
+    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
+    padding-left: 1rem; position: relative; line-height: 1.5;
+  }
+  .sources li::before { content: '→'; position: absolute; left: 0; }
+  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
+  .sources a:hover { text-decoration: underline; }
+  .sources .note {
+    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
+    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
+  }
+
+  .controls {
+    display: flex; gap: .8rem; margin-bottom: 1rem;
+    justify-content: flex-end; flex-wrap: wrap;
+  }
+  .controls button {
+    font-family: 'Inter', sans-serif;
+    font-size: .72rem; font-weight: 600;
+    padding: .4rem .8rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--fg-dim); cursor: pointer;
+    text-transform: uppercase; letter-spacing: .04em;
+    transition: all 0.15s;
+  }
+  .controls button:hover { color: var(--fg); border-color: var(--fg-dim); }
+  .controls button.active {
+    color: var(--fg); border-color: oklch(0.55 0.18 143);
+    background: oklch(0.55 0.18 143 / 0.12);
+  }
+
+  svg .bar-rect { cursor: pointer; transition: opacity 0.15s; }
+  svg .bar-rect:hover { opacity: 0.8; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>OECD GDP Growth Forecast by Nation</h1>
+    <p>Real GDP growth rate (% y/y) · OECD Economic Outlook, December 2025</p>
+    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
+  </header>
+
+  <div class="card">
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.55 0.18 143)"></div>
+        <span>2025 (estimate)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:oklch(0.55 0.15 200)"></div>
+        <span>2026 (forecast)</span>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="active" data-sort="alpha">A → Z</button>
+      <button data-sort="growth2025">2025 ↓</button>
+      <button data-sort="growth2026">2026 ↓</button>
+      <button data-sort="avg">Average ↓</button>
+    </div>
+    <h2 id="chartTitle" style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--fg)">Real GDP Growth Rate — All 38 OECD Members</h2>
+    <div class="chart-container">
+      <svg id="chartSvg"></svg>
+    </div>
+  </div>
+
+  <div class="sources">
+    <h3>Data Sources</h3>
+    <ul>
+      <li><strong>OECD Economic Outlook No. 118</strong> (December 2025) — Statistical Annex, Table 1: Real GDP.<br>
+        <a href="https://www.oecd.org/en/publications/oecd-economic-outlook_16097408.html" target="_blank">oecd.org/economic-outlook</a></li>
+      <li><strong>OECD Data Explorer</strong> — Real GDP Forecast indicator.<br>
+        <a href="https://data.oecd.org/gdp/real-gdp-forecast.htm" target="_blank">data.oecd.org</a></li>
+      <li><strong>IMF World Economic Outlook</strong> (October 2025) — cross-referenced for validation.</li>
+    </ul>
+    <div class="note">
+      <strong>Note:</strong> Growth rates represent the year-over-year percentage change in real (inflation-adjusted) GDP.
+      2025 values are estimates based on available data; 2026 values are OECD projections.
+      Figures are subject to revision as new data becomes available.
+    </div>
+  </div>
+</div>
+
+<div class="tooltip-chart" id="tooltip">
+  <div class="name" id="ttName"></div>
+  <div class="vals" id="ttVals"></div>
+</div>
+
+<script>
+// ─── OECD GDP GROWTH DATA (% y/y) ─────────────────────────────────────
+const oecdData = [
+  {name:"Australia",      code:"AUS", g2025: 1.9, g2026: 2.3},
+  {name:"Austria",        code:"AUT", g2025: 0.8, g2026: 1.3},
+  {name:"Belgium",        code:"BEL", g2025: 1.0, g2026: 1.2},
+  {name:"Canada",         code:"CAN", g2025: 1.5, g2026: 1.0},
+  {name:"Chile",          code:"CHL", g2025: 2.3, g2026: 2.2},
+  {name:"Colombia",       code:"COL", g2025: 2.7, g2026: 2.9},
+  {name:"Costa Rica",     code:"CRI", g2025: 3.8, g2026: 3.5},
+  {name:"Czech Republic", code:"CZE", g2025: 2.1, g2026: 2.5},
+  {name:"Denmark",        code:"DNK", g2025: 2.1, g2026: 1.8},
+  {name:"Estonia",        code:"EST", g2025: 1.8, g2026: 2.8},
+  {name:"Finland",        code:"FIN", g2025: 0.8, g2026: 1.5},
+  {name:"France",         code:"FRA", g2025: 0.9, g2026: 1.0},
+  {name:"Germany",        code:"DEU", g2025: 0.3, g2026: 0.8},
+  {name:"Greece",         code:"GRC", g2025: 2.1, g2026: 2.0},
+  {name:"Hungary",        code:"HUN", g2025: 1.8, g2026: 2.8},
+  {name:"Iceland",        code:"ISL", g2025: 2.0, g2026: 2.3},
+  {name:"Ireland",        code:"IRL", g2025: 3.5, g2026: 3.2},
+  {name:"Israel",         code:"ISR", g2025: 3.4, g2026: 3.8},
+  {name:"Italy",          code:"ITA", g2025: 0.9, g2026: 0.9},
+  {name:"Japan",          code:"JPN", g2025: 1.3, g2026: 0.5},
+  {name:"Korea",          code:"KOR", g2025: 1.2, g2026: 1.8},
+  {name:"Latvia",         code:"LVA", g2025: 2.4, g2026: 2.8},
+  {name:"Lithuania",      code:"LTU", g2025: 2.5, g2026: 2.8},
+  {name:"Luxembourg",     code:"LUX", g2025: 1.8, g2026: 2.2},
+  {name:"Mexico",         code:"MEX", g2025: 0.4, g2026: 1.2},
+  {name:"Netherlands",    code:"NLD", g2025: 1.4, g2026: 1.3},
+  {name:"New Zealand",    code:"NZL", g2025: 1.3, g2026: 2.1},
+  {name:"Norway",         code:"NOR", g2025: 1.7, g2026: 1.5},
+  {name:"Poland",         code:"POL", g2025: 3.5, g2026: 3.4},
+  {name:"Portugal",       code:"PRT", g2025: 2.2, g2026: 2.0},
+  {name:"Slovak Republic",code:"SVK", g2025: 2.3, g2026: 2.5},
+  {name:"Slovenia",       code:"SVN", g2025: 2.5, g2026: 2.3},
+  {name:"Spain",          code:"ESP", g2025: 2.8, g2026: 2.2},
+  {name:"Sweden",         code:"SWE", g2025: 1.9, g2026: 2.2},
+  {name:"Switzerland",    code:"CHE", g2025: 1.3, g2026: 1.5},
+  {name:"Türkiye",        code:"TUR", g2025: 3.0, g2026: 3.1},
+  {name:"United Kingdom", code:"GBR", g2025: 1.4, g2026: 1.0},
+  {name:"United States",  code:"USA", g2025: 2.0, g2026: 1.5},
+];
+
+// ─── RG PALETTE (OKLCH) ──────────────────────────────────────────────
+function growthToColor(val) {
+  const min = -0.5, max = 4.0;
+  let t = (val - min) / (max - min);
+  t = Math.max(0, Math.min(1, t));
+  let L, C, hue;
+  if (t <= 0.5) {
+    const s = t * 2;
+    L   = 0.50 + s * (0.97 - 0.50);
+    C   = 0.20 + s * (0.02 - 0.20);
+    hue = 25   + s * (95   - 25);
+  } else {
+    const s = (t - 0.5) * 2;
+    L   = 0.97 + s * (0.50 - 0.97);
+    C   = 0.02 + s * (0.20 - 0.02);
+    hue = 95   + s * (143  - 95);
+  }
+  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
+}
+
+// ─── SVG CHART ───────────────────────────────────────────────────────
+const N = oecdData.length;
+const margin = {top: 30, right: 20, bottom: 120, left: 45};
+const groupWidth = 32;
+const barWidth = 12;
+const barGap = 2;
+const totalW = margin.left + N * groupWidth + margin.right;
+const plotH = 360;
+const totalH = margin.top + plotH + margin.bottom;
+
+// Scale: value → pixel Y (0% at baseline, positive goes up, negative down)
+const yMin = -0.5, yMax = 4.5;
+function yScale(v) { return margin.top + plotH * (1 - (v - yMin) / (yMax - yMin)); }
+const zeroY = yScale(0);
+
+let currentSort = "alpha";
+const tooltip = document.getElementById("tooltip");
+const ttName  = document.getElementById("ttName");
+const ttVals  = document.getElementById("ttVals");
+
+function sortData(sortBy) {
+  const d = [...oecdData];
+  switch(sortBy) {
+    case "alpha":       d.sort((a,b) => a.name.localeCompare(b.name)); break;
+    case "growth2025":  d.sort((a,b) => b.g2025 - a.g2025); break;
+    case "growth2026":  d.sort((a,b) => b.g2026 - a.g2026); break;
+    case "avg":         d.sort((a,b) => ((b.g2025+b.g2026)/2) - ((a.g2025+a.g2026)/2)); break;
+  }
+  return d;
+}
+
+function renderChart() {
+  const data = sortData(currentSort);
+  const svg = document.getElementById("chartSvg");
+  svg.setAttribute("viewBox", `0 0 ${totalW} ${totalH}`);
+  svg.setAttribute("width", totalW);
+  svg.setAttribute("height", totalH);
+  svg.style.display = "block";
+  svg.innerHTML = "";
+
+  // Y-axis gridlines and labels
+  for (let v = 0; v <= 4; v += 1) {
+    const y = yScale(v);
+    // gridline
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", margin.left); line.setAttribute("x2", totalW - margin.right);
+    line.setAttribute("y1", y); line.setAttribute("y2", y);
+    line.setAttribute("stroke", v === 0 ? "#8b90a0" : "#2a2e3a");
+    line.setAttribute("stroke-width", v === 0 ? 1.5 : 0.5);
+    svg.appendChild(line);
+    // label
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", margin.left - 8);
+    label.setAttribute("y", y + 4);
+    label.setAttribute("text-anchor", "end");
+    label.setAttribute("fill", "#8b90a0");
+    label.setAttribute("font-size", "10");
+    label.setAttribute("font-family", "Inter, sans-serif");
+    label.textContent = v + "%";
+    svg.appendChild(label);
+  }
+
+  // Bars
+  data.forEach((d, i) => {
+    const cx = margin.left + i * groupWidth + groupWidth / 2;
+
+    [{val: d.g2025, color: "oklch(0.55 0.18 143)", offset: -barWidth/2 - barGap/2, year: "2025"},
+     {val: d.g2026, color: "oklch(0.55 0.15 200)", offset: barGap/2,                year: "2026"}
+    ].forEach(b => {
+      const barY = b.val >= 0 ? yScale(b.val) : zeroY;
+      const barH = Math.abs(yScale(b.val) - zeroY);
+      const x = cx + b.offset;
+
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("class", "bar-rect");
+      rect.setAttribute("x", x);
+      rect.setAttribute("y", barY);
+      rect.setAttribute("width", barWidth);
+      rect.setAttribute("height", Math.max(barH, 1));
+      rect.setAttribute("rx", 2);
+      rect.setAttribute("fill", b.color);
+      svg.appendChild(rect);
+
+      // Value label above bar
+      const valText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      valText.setAttribute("x", x + barWidth / 2);
+      valText.setAttribute("y", b.val >= 0 ? barY - 4 : barY + barH + 11);
+      valText.setAttribute("text-anchor", "middle");
+      valText.setAttribute("fill", growthToColor(b.val));
+      valText.setAttribute("font-size", "8");
+      valText.setAttribute("font-weight", "600");
+      valText.setAttribute("font-family", "Inter, sans-serif");
+      valText.textContent = b.val.toFixed(1);
+      svg.appendChild(valText);
+
+      // Tooltip events
+      rect.addEventListener("mouseenter", () => {
+        ttName.textContent = d.name;
+        ttVals.innerHTML = `2025: <span style="color:${growthToColor(d.g2025)}">${d.g2025.toFixed(1)}%</span> · 2026: <span style="color:${growthToColor(d.g2026)}">${d.g2026.toFixed(1)}%</span>`;
+        tooltip.style.display = "block";
+      });
+      rect.addEventListener("mousemove", (e) => {
+        tooltip.style.left = (e.clientX + 14) + "px";
+        tooltip.style.top  = (e.clientY + 14) + "px";
+      });
+      rect.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+    });
+
+    // Country label (rotated)
+    const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    lbl.setAttribute("x", 0);
+    lbl.setAttribute("y", 0);
+    lbl.setAttribute("transform", `translate(${cx}, ${margin.top + plotH + 10}) rotate(55)`);
+    lbl.setAttribute("text-anchor", "start");
+    lbl.setAttribute("fill", "#8b90a0");
+    lbl.setAttribute("font-size", "9");
+    lbl.setAttribute("font-weight", "600");
+    lbl.setAttribute("font-family", "Inter, sans-serif");
+    lbl.textContent = d.name;
+    svg.appendChild(lbl);
+  });
+}
+
+// Sort buttons
+document.querySelectorAll(".controls button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".controls button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentSort = btn.dataset.sort;
+    renderChart();
+  });
+});
+
+renderChart();
+</script>
+</body>
+</html>

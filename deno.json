@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "monthly-outlook": "deno run --allow-read --allow-write --allow-run monthly_outlook.ts"
+  },
+  "fmt": {
+    "semiColons": true,
+    "singleQuote": false
+  }
+}
