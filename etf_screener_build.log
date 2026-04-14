@@ -1,0 +1,201 @@
+Task etf-screener deno run --allow-env --allow-net --allow-read --allow-write gen_etf_screener.ts
+[yahoo-finance2] Unsupported environment: Requires Deno >= 2.0.0, found 1.40.3. (runtime=deno, version=1.40.3). Things might break or work unexpectedly!
+Fetching 66 ETF records...
+Please consider completing the survey at https://bit.ly/yahoo-finance-api-feedback if you haven't already; for more info see https://github.com/gadicc/yahoo-finance2/issues/764#issuecomment-2056623851.  This will only be shown once, but you can suppress this message in future with `new YahooFinance({ suppressNotices: ['yahooSurvey'] })`.
+[Deprecated] historical() relies on an API that Yahoo have removed.  We'll map this request to chart() for convenience, but, please consider using chart() directly instead; for more info see https://github.com/gadicc/yahoo-finance2/issues/795.  This will only be shown once, but you can suppress this message in future with `new YahooFinance({ suppressNotices: ['ripHistorical'] })`.
+The following result did not validate with schema: #/definitions/QuoteSummaryResult
+
+This may happen intermittently and you should catch errors appropriately.  However:  1) if this recently started happening on every request for a symbol that used to work, Yahoo may have changed their API.  2) If this happens on every request for a symbol you've never used before, but not for other symbols, you've found an edge-case (OR, we may just be protecting you from "bad" data sometimes stored for e.g. misspelt symbols on Yahoo's side).
+
+Please see if anyone has reported this previously:
+
+  https://github.com/gadicc/yahoo-finance2/issues?q=is%3Aissue+Failed%20validation%3A%20%23%2Fdefinitions%2FQuoteSummaryResult
+
+or open a new issue (and mention the symbol):  @gadicc/yahoo-finance2 v3.14.0
+
+  https://github.com/gadicc/yahoo-finance2/issues/new?labels=bug%2C+validation&template=validation.md&title=Failed%20validation%3A%20%23%2Fdefinitions%2FQuoteSummaryResult
+
+[
+  {
+    "schemaPath": "#/definitions/QuoteSummaryResult/items/required",
+    "instancePath": "/fundPerformance/riskOverviewStatisticsCat/riskStatisticsCat/0",
+    "message": "Missing required properties",
+    "params": {
+      "missing": [
+        "alpha",
+        "beta",
+        "meanAnnualReturn",
+        "rSquared",
+        "sharpeRatio",
+        "treynorRatio"
+For information on how to turn off the above logging or skip these errors, see https://github.com/gadicc/yahoo-finance2/tree/devel/docs/validation.md.
+      ]
+    }
+  },
+  {
+    "schemaPath": "#/definitions/QuoteSummaryResult/items/required",
+    "instancePath": "/fundPerformance/riskOverviewStatisticsCat/riskStatisticsCat/1",
+    "message": "Missing required properties",
+    "params": {
+
+      "missing": [
+        "alpha",
+At the end of the doc, there's also a section on how to "Help Fix Validation Errors" in case you'd like to contribute to the project.  Most of the time, these fixes are very quick and easy; it's just hard for our small core team to keep up, so help is always appreciated!
+
+        "beta",
+        "meanAnnualReturn",
+        "rSquared",
+        "sharpeRatio",
+        "treynorRatio"
+      ]
+    }
+  },
+  {
+    "schemaPath": "#/definitions/QuoteSummaryResult/items/required",
+    "instancePath": "/fundPerformance/riskOverviewStatisticsCat/riskStatisticsCat/2",
+    "message": "Missing required properties",
+    "params": {
+      "missing": [
+        "alpha",
+        "beta",
+        "meanAnnualReturn",
+        "rSquared",
+        "sharpeRatio",
+        "treynorRatio"
+      ]
+    }
+  }
+]
+Skipping EWU: Failed Yahoo Schema validation
+The following result did not validate with schema: #/definitions/QuoteSummaryResult
+[
+  {
+    "schemaPath": "#/definitions/QuoteSummaryResult/items/required",
+    "instancePath": "/fundPerformance/riskOverviewStatisticsCat/riskStatisticsCat/0",
+    "message": "Missing required properties",
+    "params": {
+      "missing": [
+        "alpha",
+        "beta",
+        "meanAnnualReturn",
+        "rSquared",
+        "sharpeRatio",
+        "treynorRatio"
+      ]
+
+    }
+This may happen intermittently and you should catch errors appropriately.  However:  1) if this recently started happening on every request for a symbol that used to work, Yahoo may have changed their API.  2) If this happens on every request for a symbol you've never used before, but not for other symbols, you've found an edge-case (OR, we may just be protecting you from "bad" data sometimes stored for e.g. misspelt symbols on Yahoo's side).
+  },
+  {
+    "schemaPath": "#/definitions/QuoteSummaryResult/items/required",
+    "instancePath": "/fundPerformance/riskOverviewStatisticsCat/riskStatisticsCat/1",
+    "message": "Missing required properties",
+    "params": {
+      "missing": [
+        "alpha",
+        "beta",
+        "meanAnnualReturn",
+        "rSquared",
+        "sharpeRatio",
+        "treynorRatio"
+      ]
+    }
+  },
+  {
+    "schemaPath": "#/definitions/QuoteSummaryResult/items/required",
+    "instancePath": "/fundPerformance/riskOverviewStatisticsCat/riskStatisticsCat/2",
+    "message": "Missing required properties",
+    "params": {
+      "missing": [
+
+Please see if anyone has reported this previously:
+
+  https://github.com/gadicc/yahoo-finance2/issues?q=is%3Aissue+Failed%20validation%3A%20%23%2Fdefinitions%2FQuoteSummaryResult
+
+or open a new issue (and mention the symbol):  @gadicc/yahoo-finance2 v3.14.0
+
+  https://github.com/gadicc/yahoo-finance2/issues/new?labels=bug%2C+validation&template=validation.md&title=Failed%20validation%3A%20%23%2Fdefinitions%2FQuoteSummaryResult
+
+For information on how to turn off the above logging or skip these errors, see https://github.com/gadicc/yahoo-finance2/tree/devel/docs/validation.md.
+
+At the end of the doc, there's also a section on how to "Help Fix Validation Errors" in case you'd like to contribute to the project.  Most of the time, these fixes are very quick and easy; it's just hard for our small core team to keep up, so help is always appreciated!
+
+        "alpha",
+        "beta",
+        "meanAnnualReturn",
+        "rSquared",
+        "sharpeRatio",
+        "treynorRatio"
+      ]
+    }
+  }
+]
+Skipping EWG: Failed Yahoo Schema validation
+The following result did not validate with schema: #/definitions/QuoteSummaryResult
+[
+  {
+    "schemaPath": "#/definitions/QuoteSummaryResult/items/required",
+    "instancePath": "/fundPerformance/riskOverviewStatisticsCat/riskStatisticsCat/0",
+    "message": "Missing required properties",
+    "params": {
+      "missing": [
+        "alpha",
+        "beta",
+        "meanAnnualReturn",
+        "rSquared",
+        "sharpeRatio",
+        "treynorRatio"
+      ]
+    }
+  },
+  {
+    "schemaPath": "#/definitions/QuoteSummaryResult/items/required",
+    "instancePath": "/fundPerformance/riskOverviewStatisticsCat/riskStatisticsCat/1",
+    "message": "Missing required properties",
+    "params": {
+      "missing": [
+        "alpha",
+        "beta",
+        "meanAnnualReturn",
+        "rSquared",
+        "sharpeRatio",
+        "treynorRatio"
+      ]
+    }
+  },
+  {
+    "schemaPath": "#/definitions/QuoteSummaryResult/items/required",
+    "instancePath": "/fundPerformance/riskOverviewStatisticsCat/riskStatisticsCat/2",
+    "message": "Missing required properties",
+    "params": {
+      "missing": [
+
+This may happen intermittently and you should catch errors appropriately.  However:  1) if this recently started happening on every request for a symbol that used to work, Yahoo may have changed their API.  2) If this happens on every request for a symbol you've never used before, but not for other symbols, you've found an edge-case (OR, we may just be protecting you from "bad" data sometimes stored for e.g. misspelt symbols on Yahoo's side).
+
+Please see if anyone has reported this previously:
+
+  https://github.com/gadicc/yahoo-finance2/issues?q=is%3Aissue+Failed%20validation%3A%20%23%2Fdefinitions%2FQuoteSummaryResult
+
+or open a new issue (and mention the symbol):  @gadicc/yahoo-finance2 v3.14.0
+
+  https://github.com/gadicc/yahoo-finance2/issues/new?labels=bug%2C+validation&template=validation.md&title=Failed%20validation%3A%20%23%2Fdefinitions%2FQuoteSummaryResult
+
+For information on how to turn off the above logging or skip these errors, see https://github.com/gadicc/yahoo-finance2/tree/devel/docs/validation.md.
+
+At the end of the doc, there's also a section on how to "Help Fix Validation Errors" in case you'd like to contribute to the project.  Most of the time, these fixes are very quick and easy; it's just hard for our small core team to keep up, so help is always appreciated!
+
+        "alpha",
+        "beta",
+        "meanAnnualReturn",
+        "rSquared",
+        "sharpeRatio",
+        "treynorRatio"
+      ]
+    }
+  }
+]
+Skipping EWC: Failed Yahoo Schema validation
+Written: ./etf_screener.html
+Rows: 63
+Morningstar coverage: 0/63
+Lipper coverage: 0/63

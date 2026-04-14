@@ -173,17 +173,17 @@ def metric_column(key: str) -> MetricColumn:
 
 data["Tokens/k$ (32B)"] = [
     round((t / c) * 1000, 2)
-  for t, c in zip(metric_column("32B Qwen t/s"), metric_column(COST_KEY))
+    for t, c in zip(metric_column("32B Qwen t/s"), metric_column(COST_KEY))
 ]
 data["Tokens/k$ (70B)"] = [
     round((t / c) * 1000, 2)
-  for t, c in zip(metric_column("70B Llama 3 t/s"), metric_column(COST_KEY))
+    for t, c in zip(metric_column("70B Llama 3 t/s"), metric_column(COST_KEY))
 ]
 
 LOWER_IS_BETTER = {COST_KEY, "Power (W)"}
 
 COLUMN_RANGE_OVERRIDES: dict[str, dict[str, MetricValue]] = {
-  COST_KEY: {"max": 15000},
+    COST_KEY: {"max": 15000},
 }
 
 metrics = [k for k in data if k != "Systems"]
