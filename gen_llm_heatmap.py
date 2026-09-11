@@ -417,10 +417,10 @@ html = f"""<!DOCTYPE html>
     const renderTable = updateTableColors;
 
     document.addEventListener('DOMContentLoaded', () => {{
-       initStandard();
+       try {{ initStandard(); }} catch (e) {{}}
        setSortArrow(0);
        updateNumberFormat();
-       refreshMetaChips(document);
+       try {{ refreshMetaChips(document); }} catch (e) {{}}
        updateTableColors();
     }});
   </script></head><body class="solarized-light">
@@ -469,9 +469,10 @@ const COLUMN_RANGES = {{
         {ranges_js}
     }};
 
-function updateTableColors() {{
+    function updateTableColors() {{
     const table = document.getElementById('summaryTable');
     if (!table) return;
+    if (typeof getPaletteColor !== 'function' || typeof applyBackgroundWithContrast !== 'function') return;
     const cells = table.querySelectorAll('tbody td[data-field][data-val]');
     cells.forEach(cell => {{
         const field = cell.getAttribute('data-field');
