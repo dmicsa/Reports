@@ -1,198 +1,408 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Average IQ Map of Europe</title>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:      #0f1117;
-    --surface: #181b24;
-    --border:  #2a2e3a;
-    --fg:      #e4e6ed;
-    --fg-dim:  #8b90a0;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: var(--bg); color: var(--fg);
-    min-height: 100vh; padding: 2rem;
-  }
-  .container { max-width: 1100px; margin: 0 auto; }
+  <meta charset="UTF-8">
+	<meta name="darkreader-lock">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Average IQ Map of Europe</title>
+  <link rel="stylesheet" href="https://dmicsa.github.io/HTMLAssets/Theme.css">
+  <style>
+    body { background-color: var(--bg-color); color: var(--fg-color); margin: 20px; transition: background-color 0.3s, color 0.3s; }
+    /* Controls handled by report-header in Theme.css */
+    .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    #mapSvg { width: 100%; display: block; }
+    #mapSvg path.country {
+      stroke: var(--bg-color); stroke-width: 0.4;
+      cursor: pointer; transition: stroke-width 0.15s;
+    }
+    #mapSvg path.country:hover { stroke: var(--fg-color); stroke-width: 1.2; }
+    #mapSvg text.iq-label {
+      font-weight: 700; fill: #000; pointer-events: none;
+      text-anchor: middle; dominant-baseline: central;
+    }
+    .legend-bar {
+      display: flex; align-items: center; justify-content: center;
+      gap: .6rem; margin-top: 1rem; flex-wrap: wrap;
+    }
+    .legend-gradient {
+      width: 260px; height: 14px; border-radius: 4px;
+      background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143));
+      border: 1px solid var(--border-color);
+    }
+    .legend-label { font-size: .75rem; color: var(--fg-color); opacity: .75; font-weight: 500; }
+    .tooltip {
+      position: fixed; pointer-events: none; z-index: 100;
+      background: var(--panel); border: 1px solid var(--border-color);
+      border-radius: 8px; padding: .6rem .9rem; font-size: .85rem; display: none;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+    .tooltip .name { font-weight: 700; margin-bottom: .15rem; }
+    .tooltip .iq-val { font-size: 1.1rem; font-weight: 700; }
+    .map-note {
+      font-size: .8rem; color: var(--fg-color); opacity: .75;
+      margin-top: .8rem; text-align: center;
+    }
+      /* Numeric columns 50% wider (Theme.css pins .col-num at 80px) */
+    .grid-table td.col-num, .grid-table th.col-num {
+      width: 120px !important;
+      min-width: 120px !important;
+      max-width: 120px !important;
+    }</style>
+  <script src="https://dmicsa.github.io/HTMLAssets/Standard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+  <script>
+    // --- Local State ---
+    let usePercent = false;
+    let currentSortCol = -1;
+    let currentSortAsc = true;
 
-  header { text-align: center; margin-bottom: 1.5rem; }
-  header h1 {
-    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
-    color: #FDF6E3; margin-bottom: .4rem;
-  }
-  header p { color: var(--fg-dim); font-size: .9rem; }
+    // --- Helpers ---
+    function togglePercent() {
+      usePercent = !usePercent;
+      const btn = document.getElementById('percentToggle');
+      if(btn) btn.classList.toggle('active', usePercent);
+      try { localStorage.setItem('ms_percent', usePercent); } catch(e){}
+      updateNumberFormat();
+    }
 
-  .card {
-    background: var(--surface);
-    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
-    position: relative; overflow: hidden;
-  }
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
-  }
-  .card h1 { font-size: 1.1rem; font-weight: 700; margin-bottom: .6rem; color: var(--fg); }
+    function updateNumberFormat() {
+        const table = document.getElementById('summaryTable');
+        if(!table) return;
 
-  #mapSvg { width: 100%; display: block; }
-  #mapSvg path.country {
-    stroke: #0f1117; stroke-width: 0.4;
-    cursor: pointer; transition: stroke-width 0.15s;
-  }
-  #mapSvg path.country:hover { stroke: var(--fg); stroke-width: 1.2; }
-  #mapSvg text.iq-label {
-    font-family: 'Inter', sans-serif; font-weight: 700;
-    fill: #000; pointer-events: none; text-anchor: middle;
-    dominant-baseline: central;
-  }
+		// Fields that can be toggled to %
+		const pctFields = [];
+		const srFields = [];
 
-  .tooltip {
-    position: fixed; pointer-events: none; z-index: 100;
-    background: #1f2330ee; border: 1px solid var(--border);
-    border-radius: 8px; padding: .6rem .9rem;
-    font-size: .85rem; display: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  }
-  .tooltip .name { font-weight: 700; margin-bottom: .15rem; }
-  .tooltip .iq-val { font-size: 1.1rem; font-weight: 700; }
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            Array.from(row.children).forEach(cell => {
+                const f = cell.getAttribute('data-field');
+				const val = parseFloat(cell.getAttribute('data-val'));
+				if (isNaN(val)) return;
 
-  .legend-bar {
-    display: flex; align-items: center; justify-content: center;
-    gap: .6rem; margin-top: 1rem; flex-wrap: wrap;
-  }
-  .legend-gradient {
-    width: 260px; height: 14px; border-radius: 4px;
-    background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143));
-  }
-  .legend-label { font-size: .75rem; color: var(--fg-dim); font-weight: 500; }
+				if (pctFields.includes(f)) {
+					cell.textContent = usePercent
+						? (val * 100).toFixed(1) + '%'
+						: val.toFixed(2);
+				} else if (srFields.includes(f)) {
+					cell.textContent = val.toFixed(2);
+                }
+            });
+        });
+    }
 
-  .sources {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
-  }
-  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
-  .sources ul { list-style: none; padding: 0; }
-  .sources li {
-    font-size: .8rem; color: var(--fg-dim); margin-bottom: .5rem;
-    padding-left: 1rem; position: relative; line-height: 1.5;
-  }
-  .sources li::before { content: '→'; position: absolute; left: 0; }
-  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
-  .sources a:hover { text-decoration: underline; }
-  .sources .note {
-    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
-    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
-  }
-</style>
-</head>
-<body>
-<div class="container">
+    function setSortArrow(colIndex) {
+      const table = document.getElementById('summaryTable');
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      const ths = Array.from(table.querySelectorAll('thead th'));
+      const trs = Array.from(tbody.querySelectorAll('tr'));
 
-  <header>
+      if (currentSortCol === colIndex) {
+          currentSortAsc = !currentSortAsc;
+      } else {
+          currentSortCol = colIndex;
+          currentSortAsc = true;
+		  if (colIndex > 4) currentSortAsc = false;
+      }
+
+      ths.forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+      const th = ths[colIndex];
+      if (th) th.classList.add(currentSortAsc ? 'sort-asc' : 'sort-desc');
+
+      const ascMult = currentSortAsc ? 1 : -1;
+
+      trs.sort((a, b) => {
+          let cellA = a.children[colIndex];
+          let cellB = b.children[colIndex];
+          if (!cellA || !cellB) return 0;
+
+          let valA = cellA.getAttribute('data-val');
+          if (!valA) valA = cellA.innerText.trim();
+          let valB = cellB.getAttribute('data-val');
+          if (!valB) valB = cellB.innerText.trim();
+
+          let fA = parseFloat(valA);
+          let fB = parseFloat(valB);
+
+          if (!isNaN(fA) && !isNaN(fB)) return (fA - fB) * ascMult;
+          return valA.localeCompare(valB) * ascMult;
+      });
+
+      trs.forEach(tr => tbody.appendChild(tr));
+      if (typeof updateTableColors === 'function') updateTableColors();
+    }
+
+
+
+    const renderTable = updateTableColors;
+
+    document.addEventListener('DOMContentLoaded', () => {
+       initStandard();
+       setSortArrow(0);
+       try {
+          // If stored percent preference is true, toggle it ON (which runs updateNumberFormat)
+          if(localStorage.getItem('ms_percent') === 'true') togglePercent();
+          // Otherwise, run updateNumberFormat explicitly to ensure default 2-decimal formatting
+          else updateNumberFormat();
+       } catch(e) {
+          updateNumberFormat();
+       }
+		 refreshMetaChips(document);
+       updateTableColors();
+    });
+  </script></head><body class="solarized-light">
+  <div class="report-header">
     <h1>Average IQ Map of Europe</h1>
-    <p>Estimated national IQ by country, RG diverging palette (OKLCH)</p>
-    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
-  </header>
+  <div class="controls-group">
+    <div class="palette-dropdown">
+      <input type="checkbox" id="palette-toggle">
+      <label for="palette-toggle" class="palette-button" id="palette-btn-label">
+        <span id="current-palette-name">Loading...</span>
+      </label>
+      <div class="palette-menu" id="palette-menu"></div>
+    </div>
+    <select id="themeSelect" onchange="setTheme(this.value)" title="Select Theme">
+      <option value="solarized-light" selected>Solarized Light (default)</option>
+      <option value="dark">Dark</option>
+      <option value="kiwi-dark">Kiwi Dark</option>
+      <option value="kiwi-light">Kiwi Light</option>
+      <option value="light">Light</option>
+      <option value="mint-haze">Mint Haze</option>
+      <option value="mint-haze-dark">Mint Haze Dark</option>
+      <option value="oil">Oil</option>
+      <option value="petal-blush">Petal Blush</option>
+      <option value="petal-blush-dark">Petal Blush Dark</option>
+      <option value="rose-linen">Rose Linen</option>
+      <option value="rose-linen-dark">Rose Linen Dark</option>
+      <option value="rust-brown">Rust Brown</option>
+      <option value="sage-sea">Sage Sea</option>
+      <option value="sage-sea-dark">Sage Sea Dark</option>
+      <option value="warm-sand">Warm Sand</option>
+      <option value="warm-sand-dark">Warm Sand Dark</option>
+    </select>
+  </div>  </div>
 
   <div class="card">
-    <h1>Choropleth Map — Average National IQ</h1>
-    <svg id="mapSvg"></svg>
+    <h3>Choropleth Map &mdash; Estimated National IQ (Worlddata.info, September 2026 update)</h3>
+    <svg id="mapSvg" viewBox="0 0 900 650" preserveAspectRatio="xMidYMid meet"></svg>
     <div class="legend-bar">
-      <span class="legend-label">Low IQ (~90)</span>
+      <span class="legend-label">Low IQ (~87)</span>
       <div class="legend-gradient"></div>
-      <span class="legend-label">High IQ (~102)</span>
+      <span class="legend-label">High IQ (~106)</span>
+    </div>
+    <div class="map-note">
+      42 European countries and territories. Data-driven RG diverging palette (OKLCH): red &rarr; cream &rarr; green.
+      Hover a country for details. Click a column header in the table below to sort.
     </div>
   </div>
 
-  <div class="sources">
-    <h3>Data Sources</h3>
-    <ul>
-      <li><strong>IQ estimates:</strong> Lynn, R. & Vanhanen, T. (2012). "Intelligence: A Unifying Construct for the Social Sciences."
-        Updated with Becker, D. (2019). "The NIQ Dataset" v1.3.3.<br>
+  <div class="card">
+    <h3>Country Table &mdash; Estimated Average IQ</h3>
+    <table id="summaryTable" class="grid-table">
+      <thead>
+        <tr><th class="col-ix sort-asc" onclick="setSortArrow(0)">Ix</th><th class="col-name" onclick="setSortArrow(1)">Country</th><th class="col-num" onclick="setSortArrow(2)">IQ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="col-ix" data-field="Ix" data-val="1">1</td><td class="col-name" data-field="Country" data-val="Albania">Albania</td><td class="col-num" data-field="IQ" data-val="90">90</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="2">2</td><td class="col-name" data-field="Country" data-val="Austria">Austria</td><td class="col-num" data-field="IQ" data-val="103">103</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="3">3</td><td class="col-name" data-field="Country" data-val="Belarus">Belarus</td><td class="col-num" data-field="IQ" data-val="102">102</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="4">4</td><td class="col-name" data-field="Country" data-val="Belgium">Belgium</td><td class="col-num" data-field="IQ" data-val="103">103</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="5">5</td><td class="col-name" data-field="Country" data-val="Bosnia and Herzegovina">Bosnia and Herzegovina</td><td class="col-num" data-field="IQ" data-val="92">92</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="6">6</td><td class="col-name" data-field="Country" data-val="Bulgaria">Bulgaria</td><td class="col-num" data-field="IQ" data-val="94">94</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="7">7</td><td class="col-name" data-field="Country" data-val="Croatia">Croatia</td><td class="col-num" data-field="IQ" data-val="99">99</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="8">8</td><td class="col-name" data-field="Country" data-val="Cyprus">Cyprus</td><td class="col-num" data-field="IQ" data-val="95">95</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="9">9</td><td class="col-name" data-field="Country" data-val="Czechia">Czechia</td><td class="col-num" data-field="IQ" data-val="102">102</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="10">10</td><td class="col-name" data-field="Country" data-val="Denmark">Denmark</td><td class="col-num" data-field="IQ" data-val="103">103</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="11">11</td><td class="col-name" data-field="Country" data-val="Estonia">Estonia</td><td class="col-num" data-field="IQ" data-val="106">106</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="12">12</td><td class="col-name" data-field="Country" data-val="Finland">Finland</td><td class="col-num" data-field="IQ" data-val="105">105</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="13">13</td><td class="col-name" data-field="Country" data-val="France">France</td><td class="col-num" data-field="IQ" data-val="102">102</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="14">14</td><td class="col-name" data-field="Country" data-val="Germany">Germany</td><td class="col-num" data-field="IQ" data-val="103">103</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="15">15</td><td class="col-name" data-field="Country" data-val="Greece">Greece</td><td class="col-num" data-field="IQ" data-val="97">97</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="16">16</td><td class="col-name" data-field="Country" data-val="Hungary">Hungary</td><td class="col-num" data-field="IQ" data-val="102">102</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="17">17</td><td class="col-name" data-field="Country" data-val="Iceland">Iceland</td><td class="col-num" data-field="IQ" data-val="100">100</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="18">18</td><td class="col-name" data-field="Country" data-val="Ireland">Ireland</td><td class="col-num" data-field="IQ" data-val="103">103</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="19">19</td><td class="col-name" data-field="Country" data-val="Italy">Italy</td><td class="col-num" data-field="IQ" data-val="102">102</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="20">20</td><td class="col-name" data-field="Country" data-val="Kosovo">Kosovo</td><td class="col-num" data-field="IQ" data-val="87">87</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="21">21</td><td class="col-name" data-field="Country" data-val="Latvia">Latvia</td><td class="col-num" data-field="IQ" data-val="101">101</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="22">22</td><td class="col-name" data-field="Country" data-val="Lithuania">Lithuania</td><td class="col-num" data-field="IQ" data-val="100">100</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="23">23</td><td class="col-name" data-field="Country" data-val="Luxembourg">Luxembourg</td><td class="col-num" data-field="IQ" data-val="101">101</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="24">24</td><td class="col-name" data-field="Country" data-val="Malta">Malta</td><td class="col-num" data-field="IQ" data-val="99">99</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="25">25</td><td class="col-name" data-field="Country" data-val="Moldova">Moldova</td><td class="col-num" data-field="IQ" data-val="94">94</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="26">26</td><td class="col-name" data-field="Country" data-val="Montenegro">Montenegro</td><td class="col-num" data-field="IQ" data-val="93">93</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="27">27</td><td class="col-name" data-field="Country" data-val="Netherlands">Netherlands</td><td class="col-num" data-field="IQ" data-val="104">104</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="28">28</td><td class="col-name" data-field="Country" data-val="North Macedonia">North Macedonia</td><td class="col-num" data-field="IQ" data-val="89">89</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="29">29</td><td class="col-name" data-field="Country" data-val="Norway">Norway</td><td class="col-num" data-field="IQ" data-val="102">102</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="30">30</td><td class="col-name" data-field="Country" data-val="Poland">Poland</td><td class="col-num" data-field="IQ" data-val="103">103</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="31">31</td><td class="col-name" data-field="Country" data-val="Portugal">Portugal</td><td class="col-num" data-field="IQ" data-val="101">101</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="32">32</td><td class="col-name" data-field="Country" data-val="Romania">Romania</td><td class="col-num" data-field="IQ" data-val="94">94</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="33">33</td><td class="col-name" data-field="Country" data-val="Russia">Russia</td><td class="col-num" data-field="IQ" data-val="101">101</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="34">34</td><td class="col-name" data-field="Country" data-val="Serbia">Serbia</td><td class="col-num" data-field="IQ" data-val="95">95</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="35">35</td><td class="col-name" data-field="Country" data-val="Slovakia">Slovakia</td><td class="col-num" data-field="IQ" data-val="99">99</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="36">36</td><td class="col-name" data-field="Country" data-val="Slovenia">Slovenia</td><td class="col-num" data-field="IQ" data-val="103">103</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="37">37</td><td class="col-name" data-field="Country" data-val="Spain">Spain</td><td class="col-num" data-field="IQ" data-val="101">101</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="38">38</td><td class="col-name" data-field="Country" data-val="Sweden">Sweden</td><td class="col-num" data-field="IQ" data-val="103">103</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="39">39</td><td class="col-name" data-field="Country" data-val="Switzerland">Switzerland</td><td class="col-num" data-field="IQ" data-val="104">104</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="40">40</td><td class="col-name" data-field="Country" data-val="Turkey">Turkey</td><td class="col-num" data-field="IQ" data-val="95">95</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="41">41</td><td class="col-name" data-field="Country" data-val="Ukraine">Ukraine</td><td class="col-num" data-field="IQ" data-val="98">98</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="42">42</td><td class="col-name" data-field="Country" data-val="United Kingdom">United Kingdom</td><td class="col-num" data-field="IQ" data-val="105">105</td></tr>
+      </tbody>
+    </table>
+    <div class="map-note">
+      European sample: mean &asymp; 99.4, median 101, range 87&ndash;106 (Worlddata.info, September 2026 update).
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Data Sources &amp; Notes</h3>
+    <p style="font-size:.85rem; line-height:1.6;">
+      All 42 country estimates were refreshed on 2026-09-10 against the latest published
+      <a href="https://www.worlddata.info/iq-by-country.php" target="_blank">Worlddata.info national IQ table</a>
+      (last modified September 2026; evaluation window 2007&ndash;2025), which synthesises the
+      Rindermann (2007), Lynn &amp; Meisenberg (2010) and Lynn &amp; Becker (2019) datasets with
+      PISA results from 2015&ndash;2025. The 2026 revision raised most European values by 2&ndash;6 points
+      relative to the Lynn/Becker 2019 figures used in the previous version of this report
+      (e.g., Estonia 100&rarr;106, Czechia 98&rarr;102, Spain 94&rarr;101, United Kingdom 100&rarr;105),
+      consistent with re-normalisation against recent PISA rounds. Figures are shown as published (integers).
+    </p>
+    <ul style="font-size:.8rem; color:var(--fg-color); opacity:.85; line-height:1.6; padding-left:1.2rem; margin-top:.8rem;">
+      <li><strong>Primary IQ estimates:</strong> Worlddata.info, "IQ: Intelligence by country" (September 2026 update), based on Heiner Rindermann (2007), Khaleefa &amp; Lynn (2008), Lynn &amp; Meisenberg (2010), Lynn &amp; Becker (2019) "The Intelligence of Nations" (Ulster Institute), and OECD PISA 2015&ndash;2025.<br>
+        <a href="https://www.worlddata.info/iq-by-country.php" target="_blank">https://www.worlddata.info/iq-by-country.php</a></li>
+      <li><strong>Underlying dataset:</strong> Lynn, R. &amp; Becker, D. (2019). "The Intelligence of Nations." Ulster Institute for Social Research &mdash; NIQ Dataset v1.3.x.<br>
         <a href="https://viewoniq.org/" target="_blank">https://viewoniq.org/</a></li>
-      <li><strong>World Population Review</strong> — Average IQ by Country 2025.<br>
+      <li><strong>Cross-check (2025&ndash;2026):</strong> World Population Review, "Average IQ by Country 2026" and DataPandas (International IQ Test 2025, n &asymp; 1.2M) &mdash; online self-selected samples; rankings broadly consistent, levels typically 1&ndash;3 points higher.<br>
         <a href="https://worldpopulationreview.com/country-rankings/average-iq-by-country" target="_blank">https://worldpopulationreview.com/country-rankings/average-iq-by-country</a></li>
-      <li><strong>Map geometry:</strong> Natural Earth 50m countries via TopoJSON CDN.<br>
+      <li><strong>Map geometry:</strong> Natural Earth 50m countries via TopoJSON CDN (world-atlas@2).<br>
         <a href="https://github.com/topojson/world-atlas" target="_blank">https://github.com/topojson/world-atlas</a></li>
-      <li><strong>Palette:</strong> RG diverging palette (OKLCH perceptual color space) from the author's Palettes.json.<br>
-        Red oklch(0.5, 0.2, 25°) → Green oklch(0.5, 0.2, 143°)</li>
+      <li><strong>Palette:</strong> RG diverging palette (OKLCH perceptual color space) from the author's Palettes.json &mdash; Red oklch(0.50, 0.20, 25&deg;) &rarr; Cream #FDF6E3 &rarr; Green oklch(0.50, 0.20, 143&deg;); range clamped to the data bounds 87&ndash;106.</li>
     </ul>
-    <div class="note">
-      National IQ estimates are controversial and methodologically debated. They represent broad averages from
-      various psychometric studies and may be influenced by education access, nutrition, socioeconomic factors,
-      and sampling methodology. Values should be interpreted with caution.
+    <div class="map-note" style="text-align:left; border-top:1px solid var(--border-color); padding-top:.8rem; margin-top:.8rem;">
+      National IQ estimates are controversial and methodologically debated; a 2026 OSF evaluation
+      (Sear, R., "'National IQ' datasets do not provide accurate, unbiased or comparable measures of
+      cognitive ability worldwide") argues the underlying Lynn-style samples are often unrepresentative.
+      Values represent broad averages from psychometric studies and PISA-derived proxies, and are
+      influenced by education access, nutrition, socioeconomic factors, sampling methodology and the
+      Flynn effect (plus a documented reverse-Flynn effect in several European countries). Interpret with caution.
     </div>
   </div>
-</div>
 
-<div class="tooltip" id="tooltip">
-  <div class="name" id="ttName"></div>
-  <div class="iq-val" id="ttIQ"></div>
-</div>
+  <div class="footer">
+    <p>Europe IQ Map v2.0.0 &copy; 2026 Dan Micsa, PhD (dmicsa@gmail.com)</p>
+    <p>Generated on 2026-09-10</p>
+  </div>
+
+  <div class="tooltip" id="tooltip">
+    <div class="name" id="ttName"></div>
+    <div class="iq-val" id="ttIQ"></div>
+  </div>
+
+<script>
+function updateTableColors() {
+    const table = document.getElementById('summaryTable');
+    if (!table) return;
+
+    const cells = table.querySelectorAll('tbody td[data-field][data-val]');
+    cells.forEach(cell => {
+        const field = cell.getAttribute('data-field');
+        const rawVal = parseFloat(cell.getAttribute('data-val'));
+        if (!field || Number.isNaN(rawVal)) return;
+
+        let min = 0.0;
+        let max = 1.0;
+        let reverse = false;
+        let colorValue = rawVal;
+        let usePalette = false;
+
+        if (field === 'IQ') {
+            usePalette = true;
+            colorValue = rawVal;
+            min = 87.0;
+            max = 106.0;
+        }
+
+        if (usePalette) {
+            const rgb = getPaletteColor(colorValue, min, max, reverse);
+            applyBackgroundWithContrast(cell, rgb);
+        }
+    });
+}
+
+(function() {
+    const previousSetPalette = window.setPalette;
+    if (typeof previousSetPalette === 'function') {
+        window.setPalette = function(name) {
+            previousSetPalette(name);
+            updateTableColors();
+        };
+    }
+
+    const previousRenderTable = window.renderTable;
+    window.renderTable = function() {
+        if (typeof previousRenderTable === 'function') {
+            previousRenderTable();
+        }
+        updateTableColors();
+    };
+})();
+</script>
 
 <script>
 // ─── IQ DATA keyed by ISO 3166-1 NUMERIC code (string) ────────────────
-// This matches the world-atlas TopoJSON feature IDs directly
+// Matches the world-atlas TopoJSON feature IDs directly
+// Source: Worlddata.info national IQ table, September 2026 update
 const iqByNumeric = {
   "8":   {name:"Albania",          iq:90},
-  "40":  {name:"Austria",          iq:100},
-  "112": {name:"Belarus",          iq:101},
-  "56":  {name:"Belgium",          iq:99},
-  "70":  {name:"Bosnia & Herz.",   iq:93},
-  "100": {name:"Bulgaria",         iq:93},
-  "191": {name:"Croatia",          iq:97},
-  "196": {name:"Cyprus",           iq:92},
-  "203": {name:"Czechia",          iq:98},
-  "208": {name:"Denmark",          iq:99},
-  "233": {name:"Estonia",          iq:100},
-  "246": {name:"Finland",          iq:101},
-  "250": {name:"France",           iq:98},
-  "276": {name:"Germany",          iq:100},
-  "300": {name:"Greece",           iq:93},
-  "348": {name:"Hungary",          iq:99},
-  "352": {name:"Iceland",          iq:99},
-  "372": {name:"Ireland",          iq:98},
-  "380": {name:"Italy",            iq:97},
-  "383": {name:"Kosovo",           iq:90},
-  "428": {name:"Latvia",           iq:98},
-  "440": {name:"Lithuania",        iq:96},
-  "442": {name:"Luxembourg",       iq:99},
-  "807": {name:"N. Macedonia",     iq:90},
-  "470": {name:"Malta",            iq:95},
-  "498": {name:"Moldova",          iq:90},
-  "499": {name:"Montenegro",       iq:90},
-  "528": {name:"Netherlands",      iq:100},
-  "578": {name:"Norway",           iq:99},
-  "616": {name:"Poland",           iq:99},
-  "620": {name:"Portugal",         iq:95},
+  "40":  {name:"Austria",          iq:103},
+  "112": {name:"Belarus",          iq:102},
+  "56":  {name:"Belgium",          iq:103},
+  "70":  {name:"Bosnia & Herz.",   iq:92},
+  "100": {name:"Bulgaria",         iq:94},
+  "191": {name:"Croatia",          iq:99},
+  "196": {name:"Cyprus",           iq:95},
+  "203": {name:"Czechia",          iq:102},
+  "208": {name:"Denmark",          iq:103},
+  "233": {name:"Estonia",          iq:106},
+  "246": {name:"Finland",          iq:105},
+  "250": {name:"France",           iq:102},
+  "276": {name:"Germany",          iq:103},
+  "300": {name:"Greece",           iq:97},
+  "348": {name:"Hungary",          iq:102},
+  "352": {name:"Iceland",          iq:100},
+  "372": {name:"Ireland",          iq:103},
+  "380": {name:"Italy",            iq:102},
+  "383": {name:"Kosovo",           iq:87},
+  "428": {name:"Latvia",           iq:101},
+  "440": {name:"Lithuania",        iq:100},
+  "442": {name:"Luxembourg",       iq:101},
+  "807": {name:"N. Macedonia",     iq:89},
+  "470": {name:"Malta",            iq:99},
+  "498": {name:"Moldova",          iq:94},
+  "499": {name:"Montenegro",       iq:93},
+  "528": {name:"Netherlands",      iq:104},
+  "578": {name:"Norway",           iq:102},
+  "616": {name:"Poland",           iq:103},
+  "620": {name:"Portugal",         iq:101},
   "642": {name:"Romania",          iq:94},
-  "688": {name:"Serbia",           iq:92},
-  "703": {name:"Slovakia",         iq:98},
-  "705": {name:"Slovenia",         iq:98},
-  "724": {name:"Spain",            iq:94},
-  "752": {name:"Sweden",           iq:99},
-  "756": {name:"Switzerland",      iq:101},
-  "792": {name:"Turkey",           iq:90},
-  "804": {name:"Ukraine",          iq:95},
-  "826": {name:"United Kingdom",   iq:100},
-  "643": {name:"Russia",           iq:97},
+  "688": {name:"Serbia",           iq:95},
+  "703": {name:"Slovakia",         iq:99},
+  "705": {name:"Slovenia",         iq:103},
+  "724": {name:"Spain",            iq:101},
+  "752": {name:"Sweden",           iq:103},
+  "756": {name:"Switzerland",      iq:104},
+  "792": {name:"Turkey",           iq:95},
+  "804": {name:"Ukraine",          iq:98},
+  "826": {name:"United Kingdom",   iq:105},
+  "643": {name:"Russia",           iq:101},
 };
 
 // Set of all numeric IDs we care about
 const euroIds = new Set(Object.keys(iqByNumeric));
 
 // ─── RG PALETTE (OKLCH) ───────────────────────────────────────────────
-// Actual palette from Palettes.json:
 //   Red = oklch(0.50 0.20 25)  →  Mid = #FDF6E3 ≈ oklch(0.97 0.02 95)  →  Green = oklch(0.50 0.20 143)
-// Data range set to actual data bounds for maximum color differentiation
-const IQ_MIN = 90, IQ_MAX = 101;
+// Data range clamped to the current dataset bounds for maximum differentiation
+const IQ_MIN = 87, IQ_MAX = 106;
 
 // Piecewise interpolation through the 3 palette stops
 function iqToColor(iq) {
@@ -200,17 +410,15 @@ function iqToColor(iq) {
   t = Math.max(0, Math.min(1, t));
   let L, C, hue;
   if (t <= 0.5) {
-    // Red → Cream (t: 0→0.5  mapped to s: 0→1)
     const s = t * 2;
-    L   = 0.50 + s * (0.97 - 0.50);  // 0.50 → 0.97
-    C   = 0.20 + s * (0.02 - 0.20);  // 0.20 → 0.02
-    hue = 25   + s * (95   - 25);    // 25   → 95
+    L   = 0.50 + s * (0.97 - 0.50);
+    C   = 0.20 + s * (0.02 - 0.20);
+    hue = 25   + s * (95   - 25);
   } else {
-    // Cream → Green (t: 0.5→1  mapped to s: 0→1)
     const s = (t - 0.5) * 2;
-    L   = 0.97 + s * (0.50 - 0.97);  // 0.97 → 0.50
-    C   = 0.02 + s * (0.20 - 0.02);  // 0.02 → 0.20
-    hue = 95   + s * (143  - 95);    // 95   → 143
+    L   = 0.97 + s * (0.50 - 0.97);
+    C   = 0.02 + s * (0.20 - 0.02);
+    hue = 95   + s * (143  - 95);
   }
   return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
 }
@@ -222,9 +430,7 @@ function getInfo(feature) {
 // ─── MAP SETUP ────────────────────────────────────────────────────────
 const WIDTH = 900, HEIGHT = 650;
 
-const svg = d3.select("#mapSvg")
-  .attr("viewBox", `0 0 ${WIDTH} ${HEIGHT}`)
-  .attr("preserveAspectRatio", "xMidYMid meet");
+const svg = d3.select("#mapSvg");
 
 const tooltip = document.getElementById("tooltip");
 const ttName  = document.getElementById("ttName");
@@ -268,20 +474,13 @@ function getLabelPos(f) {
 d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json").then(world => {
   const allCountries = topojson.feature(world, world.objects.countries);
 
-  // Debug: log all feature IDs to console so we can verify matching
-  console.log("All feature IDs:", allCountries.features.map(f => f.id));
-  console.log("Our euroIds:", [...euroIds]);
-  console.log("Matched:", allCountries.features.filter(f => euroIds.has(String(f.id))).map(f => f.id));
-
   // Include: (1) any country with IQ data, OR (2) nearby countries for context
   const euroFeatures = allCountries.features.filter(f => {
     const id = String(f.id);
     if (euroIds.has(id)) return true;
-    // Include neighbors for visual context (rendered grey)
-    // Check if any part of the geometry is in the European bounding box
+    // Include neighbors for visual context (rendered with theme border color)
     const bounds = pathGen.bounds(f);
     if (!bounds || !isFinite(bounds[0][0])) return false;
-    // If the country renders on screen, include it
     const [x0, y0] = bounds[0];
     const [x1, y1] = bounds[1];
     const area = (x1 - x0) * (y1 - y0);
@@ -297,7 +496,7 @@ d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json").then(wo
     .attr("d", pathGen)
     .attr("fill", f => {
       const info = getInfo(f);
-      return info ? iqToColor(info.iq) : "#2a2e3a";
+      return info ? iqToColor(info.iq) : "var(--border-color)";
     })
     .on("mouseenter", (event, f) => {
       const info = getInfo(f);

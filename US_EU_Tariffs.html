@@ -1,127 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>US vs EU Reciprocal Tariffs by Product</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:      #0f1117;
-    --surface: #181b24;
-    --border:  #2a2e3a;
-    --fg:      #e4e6ed;
-    --fg-dim:  #8b90a0;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: var(--bg); color: var(--fg);
-    min-height: 100vh; padding: 2rem;
-  }
-  .container { max-width: 1200px; margin: 0 auto; }
+  <meta charset="UTF-8">
+	<meta name="darkreader-lock">
+  <title>US vs EU Reciprocal Tariffs by Product</title>
+  <link rel="stylesheet" href="https://dmicsa.github.io/HTMLAssets/Theme.css">
+  <style>
+    body { background-color: var(--bg-color); color: var(--fg-color); margin: 20px; transition: background-color 0.3s, color 0.3s; }
+    /* Controls handled by report-header in Theme.css */
+    .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 
-  header { text-align: center; margin-bottom: 1.5rem; }
-  header h1 {
-    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
-    color: #FDF6E3; margin-bottom: .4rem;
-  }
-  header p { color: var(--fg-dim); font-size: .9rem; }
+    .card h2 { font-size: 1.15rem; margin-bottom: .4rem; }
+    .card .subtitle { font-size: .85rem; opacity: .8; margin-bottom: 1rem; line-height: 1.5; }
 
-  .card {
-    background: var(--surface);
-    border-radius: 16px; padding: 1.5rem 1.5rem 1rem; margin-bottom: 2rem;
-    position: relative; overflow: hidden;
-  }
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
-  }
-  .card h2 {
-    font-size: 1rem; font-weight: 700; margin-bottom: .6rem; color: var(--fg);
-  }
-  .card .subtitle {
-    font-size: .78rem; color: var(--fg-dim); margin-bottom: 1.2rem; line-height: 1.5;
-  }
+    .legend { display: flex; gap: 1.5rem; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: .4rem; font-size: .85rem; opacity: .85; }
+    .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
 
-  .legend {
-    display: flex; gap: 1.5rem; justify-content: center;
-    margin-bottom: 1.2rem; flex-wrap: wrap;
-  }
-  .legend-item {
-    display: flex; align-items: center; gap: .4rem;
-    font-size: .8rem; color: var(--fg-dim);
-  }
-  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+    .chart-container { width: 100%; overflow-x: auto; margin-bottom: 1rem; }
+    svg { display: block; }
+    svg text { font-family: inherit; }
+    svg .bar-rect { cursor: pointer; transition: opacity 0.12s; }
+    svg .bar-rect:hover { opacity: 0.75; }
+    svg .us-bar { fill: var(--chart-short); }
+    svg .eu-bar { fill: var(--chart-long); }
+    svg .us-val { fill: var(--chart-short); font-weight: 700; }
+    svg .eu-val { fill: var(--chart-long); font-weight: 700; }
+    svg .prod-label { fill: var(--fg-color); font-weight: 600; }
+    svg .tick-label { fill: var(--fg-color); opacity: 0.65; }
+    svg .gridline { stroke: var(--border-color); stroke-width: 0.5; }
+    svg .axisline { stroke: var(--fg-color); stroke-width: 1; }
 
-  .chart-container { width: 100%; overflow-x: auto; }
+    .tooltip-chart {
+      position: fixed; pointer-events: none; z-index: 100;
+      background: var(--bg-color); border: 1px solid var(--border-color); color: var(--fg-color);
+      border-radius: 8px; padding: .6rem .9rem; font-size: .82rem; display: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25); max-width: 340px; line-height: 1.5;
+    }
+    .tooltip-chart .tt-name { font-weight: 700; margin-bottom: .2rem; }
+    .tooltip-chart .tt-vals { font-size: .78rem; opacity: .85; }
+    .tt-us { color: var(--chart-short); font-weight: 700; }
+    .tt-eu { color: var(--chart-long); font-weight: 700; }
+    .tt-note { opacity: .75; }
 
-  svg text { font-family: 'Inter', sans-serif; }
-  svg .bar-rect { cursor: pointer; transition: opacity 0.12s; }
-  svg .bar-rect:hover { opacity: 0.75; }
+    .col-note, .grid-table td.col-note, .grid-table th.col-note {
+      width: 460px !important; min-width: 460px !important; max-width: 460px !important;
+      text-align: left !important; white-space: normal !important; font-size: 15px !important;
+    }
 
-  .tooltip-chart {
-    position: fixed; pointer-events: none; z-index: 100;
-    background: #1f2330ee; border: 1px solid var(--border);
-    border-radius: 8px; padding: .6rem .9rem;
-    font-size: .82rem; display: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    max-width: 320px; line-height: 1.5;
-  }
-  .tooltip-chart .tt-name { font-weight: 700; margin-bottom: .2rem; }
-  .tooltip-chart .tt-vals { font-size: .78rem; color: var(--fg-dim); }
+    .sources h3 { font-size: 1rem; margin-bottom: .8rem; }
+    .sources ul { list-style: none; padding: 0; margin: 0; }
+    .sources li { font-size: .85rem; opacity: .85; margin-bottom: .5rem; padding-left: 1rem; position: relative; line-height: 1.5; }
+    .sources li::before { content: '\2192'; position: absolute; left: 0; }
+    .sources .note { font-size: .8rem; opacity: .75; margin-top: .8rem; border-top: 1px solid var(--border-color); padding-top: .8rem; line-height: 1.6; }
+      /* Numeric columns 50% wider (Theme.css pins .col-num at 80px) */
+    .grid-table td.col-num, .grid-table th.col-num {
+      width: 120px !important;
+      min-width: 120px !important;
+      max-width: 120px !important;
+    }</style>
+  <script src="https://dmicsa.github.io/HTMLAssets/Standard.js"></script>
+  <script>
+    // --- Local State ---
+    let usePercent = false;
+    const sortState = {};
 
-  .sources {
-    background: var(--surface);
-    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
-  }
-  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
-  .sources ul { list-style: none; padding: 0; }
-  .sources li {
-    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
-    padding-left: 1rem; position: relative; line-height: 1.5;
-  }
-  .sources li::before { content: '→'; position: absolute; left: 0; }
-  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
-  .sources a:hover { text-decoration: underline; }
-  .sources .note {
-    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
-    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
-  }
-</style>
+    // --- Helpers ---
+    function togglePercent() {
+      usePercent = !usePercent;
+      const btn = document.getElementById('percentToggle');
+      if(btn) btn.classList.toggle('active', usePercent);
+      try { localStorage.setItem('ms_percent', usePercent); } catch(e){}
+      updateNumberFormat();
+    }
+
+    function updateNumberFormat() {
+      ['tariffTable', 'mfnTable'].forEach(id => {
+        const table = document.getElementById(id);
+        if(!table) return;
+
+        // Fields that can be toggled to %
+        const pctFields = ['US on EU', 'EU on US'];
+        const srFields = [];
+
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+          Array.from(row.children).forEach(cell => {
+            const f = cell.getAttribute('data-field');
+            const val = parseFloat(cell.getAttribute('data-val'));
+            if (isNaN(val)) return;
+
+            if (pctFields.includes(f)) {
+              cell.textContent = usePercent
+                ? (val * 100).toFixed(1) + '%'
+                : val.toFixed(2);
+            } else if (srFields.includes(f)) {
+              cell.textContent = val.toFixed(2);
+            }
+          });
+        });
+      });
+    }
+
+    function setSortArrow(tableId, colIndex) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      const ths = Array.from(table.querySelectorAll('thead th'));
+      const trs = Array.from(tbody.querySelectorAll('tr'));
+      const st = sortState[tableId] || (sortState[tableId] = { col: -1, asc: true });
+
+      if (st.col === colIndex) {
+          st.asc = !st.asc;
+      } else {
+          st.col = colIndex;
+          // Numeric rate columns default descending, text columns ascending
+          st.asc = !(colIndex === 2 || colIndex === 3);
+      }
+
+      ths.forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+      const th = ths[colIndex];
+      if (th) th.classList.add(st.asc ? 'sort-asc' : 'sort-desc');
+
+      const ascMult = st.asc ? 1 : -1;
+
+      trs.sort((a, b) => {
+          let cellA = a.children[colIndex];
+          let cellB = b.children[colIndex];
+          if (!cellA || !cellB) return 0;
+
+          let valA = cellA.getAttribute('data-val');
+          if (!valA) valA = cellA.innerText.trim();
+          let valB = cellB.getAttribute('data-val');
+          if (!valB) valB = cellB.innerText.trim();
+
+          let fA = parseFloat(valA);
+          let fB = parseFloat(valB);
+
+          if (!isNaN(fA) && !isNaN(fB)) return (fA - fB) * ascMult;
+          return valA.localeCompare(valB) * ascMult;
+      });
+
+      trs.forEach(tr => tbody.appendChild(tr));
+      if (typeof updateTableColors === 'function') updateTableColors();
+    }
+
+    const renderTable = updateTableColors;
+
+    document.addEventListener('DOMContentLoaded', () => {
+       initStandard();
+       setSortArrow('tariffTable', 0);
+       setSortArrow('mfnTable', 0);
+       try {
+          // If stored percent preference is true, toggle it ON (which runs updateNumberFormat)
+          if(localStorage.getItem('ms_percent') === 'true') togglePercent();
+          // Otherwise, run updateNumberFormat explicitly to ensure default 2-decimal formatting
+          else updateNumberFormat();
+       } catch(e) {
+          updateNumberFormat();
+       }
+		 refreshMetaChips(document);
+       updateTableColors();
+    });
+  </script>
 </head>
-<body>
-<div class="container">
+<body class="solarized-light">
+  <div class="report-header">
+    <h1>US &harr; EU Reciprocal Tariffs by Product</h1>
+  <div class="controls-group">
+    <button id="percentToggle" class="btn btn-sm" onclick="togglePercent()" title="Toggle percentage display">%</button>
+    <div class="palette-dropdown">
+      <input type="checkbox" id="palette-toggle">
+      <label for="palette-toggle" class="palette-button" id="palette-btn-label">
+        <span id="current-palette-name">Loading...</span>
+      </label>
+      <div class="palette-menu" id="palette-menu"></div>
+    </div>
+    <select id="themeSelect" onchange="setTheme(this.value)" title="Select Theme">
+      <option value="solarized-light" selected>Solarized Light</option>
+      <option value="dark">Dark</option>
+      <option value="kiwi-dark">Kiwi Dark</option>
+      <option value="kiwi-light">Kiwi Light</option>
+      <option value="light">Light</option>
+      <option value="mint-haze">Mint Haze</option>
+      <option value="mint-haze-dark">Mint Haze Dark</option>
+      <option value="oil">Oil</option>
+      <option value="petal-blush">Petal Blush</option>
+      <option value="petal-blush-dark">Petal Blush Dark</option>
+      <option value="rose-linen">Rose Linen</option>
+      <option value="rose-linen-dark">Rose Linen Dark</option>
+      <option value="rust-brown">Rust Brown</option>
+      <option value="sage-sea">Sage Sea</option>
+      <option value="sage-sea-dark">Sage Sea Dark</option>
+      <option value="warm-sand">Warm Sand</option>
+      <option value="warm-sand-dark">Warm Sand Dark</option>
+    </select>
+  </div>  </div>
 
-  <header>
-    <h1>US ↔ EU Reciprocal Tariffs by Product</h1>
-    <p>Effective rates as of February 2026, post-Supreme Court IEEPA ruling & US-EU Framework Agreement</p>
-    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
-  </header>
-
-  <!-- CHART 1: Current effective rates (Feb 2026) -->
   <div class="card">
-    <h2>Current Effective Tariff Rates — US on EU imports vs EU on US imports</h2>
+    <h2>Current Effective Tariff Rates &mdash; US on EU imports vs EU on US imports (September 2026)</h2>
     <div class="subtitle">
-      Post-Supreme Court IEEPA ruling (Feb 20, 2026) + US-EU Framework Agreement (Sept 2025).
-      Section 232 tariffs on steel/aluminum remain. IEEPA tariffs struck down.
+      Post-Supreme Court IEEPA ruling (Feb 20, 2026) &rarr; Section 122 10% global surcharge (Feb 24&ndash;Jul 24, 2026, expired) &rarr;
+      Section 301 forced-labor tariffs effective Jul 24, 2026 (10&ndash;12.5% on 60 economies; EU combined MFN+Section 301 generally capped at 10%, below the Framework Agreement's 15% ceiling).
+      Section 232 tariffs remain: steel/aluminum/copper 50%, autos/parts 15% combined; pharmaceuticals, semiconductors and lumber Section 232 actions pending, capped at &le;15% for the EU.
+      EU side: Implementing Regulations adopted Jun 25, 2026 eliminate duties on US industrial goods (in force to end-2029); EU retaliatory tariffs remain suspended since Aug 2025.
+      Rates are stored as fractions &mdash; use the % button for percent display.
     </div>
     <div class="legend">
       <div class="legend-item">
-        <div class="legend-swatch" style="background:oklch(0.55 0.18 25)"></div>
-        <span>🇺🇸 US tariff on EU goods</span>
+        <div class="legend-swatch" style="background:var(--chart-short)"></div>
+        <span>&#127468;&#127462; US tariff on EU goods</span>
       </div>
       <div class="legend-item">
-        <div class="legend-swatch" style="background:oklch(0.55 0.15 230)"></div>
-        <span>🇪🇺 EU tariff on US goods</span>
+        <div class="legend-swatch" style="background:var(--chart-long)"></div>
+        <span>&#127466;&#127475; EU tariff on US goods</span>
       </div>
     </div>
     <div class="chart-container">
       <svg id="chart1"></svg>
     </div>
+    <table id="tariffTable" class="grid-table no-sticky">
+      <thead>
+        <tr><th class="col-ix" onclick="setSortArrow('tariffTable',0)">Ix</th><th class="col-name" onclick="setSortArrow('tariffTable',1)">Product</th><th class="col-num" onclick="setSortArrow('tariffTable',2)">US on EU</th><th class="col-num" onclick="setSortArrow('tariffTable',3)">EU on US</th><th class="col-note" onclick="setSortArrow('tariffTable',4)">Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="col-ix" data-field="Ix" data-val="1">1</td><td class="col-name" data-field="Product" data-val="Steel">Steel</td><td class="col-num" data-field="US on EU" data-val="0.50">0.50</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">Section 232 (50% since Jun 2025). EU retaliatory 25% suspended since Aug 2025; US industrial goods now 0% into the EU.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="2">2</td><td class="col-name" data-field="Product" data-val="Aluminum">Aluminum</td><td class="col-num" data-field="US on EU" data-val="0.50">0.50</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">Section 232 (50% since Jun 2025). EU retaliation suspended; TRQ cooperation under discussion.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="3">3</td><td class="col-name" data-field="Product" data-val="Copper">Copper</td><td class="col-num" data-field="US on EU" data-val="0.50">0.50</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">Section 232 copper Proclamation 10962 &mdash; 50% since Aug 2025 (was 25% figure in prior edition). EU MFN 0%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="4">4</td><td class="col-name" data-field="Product" data-val="Automobiles">Automobiles</td><td class="col-num" data-field="US on EU" data-val="0.15">0.15</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">Section 232 combined 15% (down from 27.5%, effective Aug 1, 2025). EU 10% MFN eliminated on US autos by the 2026 Implementing Regulations.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="5">5</td><td class="col-name" data-field="Product" data-val="Auto Parts">Auto Parts</td><td class="col-num" data-field="US on EU" data-val="0.15">0.15</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">Section 232 combined 15% cap. EU duties (~3&ndash;4.5%) eliminated on US parts (2026 regulations).</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="6">6</td><td class="col-name" data-field="Product" data-val="Dairy Products">Dairy Products</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0.30">0.30</td><td class="col-note" data-field="Notes">US: MFN + Section 301, combined generally capped at 10% (down from 15% Framework ceiling). EU ~30% MFN retained; new US dairy TRQs under the 2026 regulations.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="7">7</td><td class="col-name" data-field="Product" data-val="Beef &amp; Meat">Beef &amp; Meat</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0.128">0.13</td><td class="col-note" data-field="Notes">US: Section 301 cap 10%; certain agricultural products (incl. beef) exempt. EU ~12.8% + SPS rules; pork/bison get preferential access.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="8">8</td><td class="col-name" data-field="Product" data-val="Wine &amp; Spirits">Wine &amp; Spirits</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: Section 301 cap 10% (down from 15% Framework ceiling). EU: 0% on US wine &amp; spirits (duty-free).</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="9">9</td><td class="col-name" data-field="Product" data-val="Cereals &amp; Grains">Cereals &amp; Grains</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0.35">0.35</td><td class="col-note" data-field="Notes">US: Section 301 cap 10%. EU heavily protects grains (CAP), ~35%; some TRQ access granted in 2026.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="10">10</td><td class="col-name" data-field="Product" data-val="Sugar &amp; Confectionery">Sugar &amp; Confectionery</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0.30">0.30</td><td class="col-note" data-field="Notes">US: Section 301 cap 10% (EU on 'non-sensitive' ag list). EU retains ~30% on sugar (sensitive list) with limited TRQs.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="11">11</td><td class="col-name" data-field="Product" data-val="Chemicals">Chemicals</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: Section 301 cap 10% (chemical precursors MFN-only per Framework). EU duties eliminated on US industrial chemicals.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="12">12</td><td class="col-name" data-field="Product" data-val="Pharmaceuticals">Pharmaceuticals</td><td class="col-num" data-field="US on EU" data-val="0">0.00</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: currently 0%; generic pharma/ingredients MFN-only per Framework; pending Section 232 pharma action capped &le;15% for EU. EU zero-for-zero.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="13">13</td><td class="col-name" data-field="Product" data-val="Machinery">Machinery</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: Section 301 cap 10% (MFN ~2.4%). EU industrial-goods duties eliminated (2026 regulations).</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="14">14</td><td class="col-name" data-field="Product" data-val="Electronics &amp; Semiconductors">Electronics &amp; Semiconductors</td><td class="col-num" data-field="US on EU" data-val="0">0.00</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">ITA &mdash; 0% both sides; pending Section 232 semiconductor action capped &le;15% for EU. EU 0%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="15">15</td><td class="col-name" data-field="Product" data-val="Textiles &amp; Apparel">Textiles &amp; Apparel</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: Section 301 combined cap 10% (below ~12% MFN average). EU duties eliminated on US textiles.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="16">16</td><td class="col-name" data-field="Product" data-val="Footwear">Footwear</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: Section 301 cap 10% (was ~11% MFN). EU industrial-goods duties eliminated.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="17">17</td><td class="col-name" data-field="Product" data-val="Ceramics &amp; Glass">Ceramics &amp; Glass</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: Section 301 cap 10%. EU duties eliminated (2026 regulations).</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="18">18</td><td class="col-name" data-field="Product" data-val="Plastics &amp; Rubber">Plastics &amp; Rubber</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: Section 301 cap 10%. EU duties eliminated.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="19">19</td><td class="col-name" data-field="Product" data-val="Paper &amp; Pulp">Paper &amp; Pulp</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: MFN 0% + Section 301 (capped 10%). EU 0%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="20">20</td><td class="col-name" data-field="Product" data-val="Furniture">Furniture</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: Section 301 cap 10% (MFN ~2.5%). EU duties eliminated.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="21">21</td><td class="col-name" data-field="Product" data-val="Aircraft (civil)">Aircraft (civil)</td><td class="col-num" data-field="US on EU" data-val="0">0.00</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">Framework Agreement: MFN-only (0%) on all EU aircraft and parts since Sep 1, 2025. EU 0%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="22">22</td><td class="col-name" data-field="Product" data-val="Lumber &amp; Wood">Lumber &amp; Wood</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US: Section 301 cap 10%; pending Section 232 lumber action capped &le;15% for EU. EU 0% on most wood.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="23">23</td><td class="col-name" data-field="Product" data-val="Tobacco">Tobacco</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0.10">0.10</td><td class="col-note" data-field="Notes">US: Section 301 cap 10%. EU moderate MFN ~10% retained (+ excise).</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="24">24</td><td class="col-name" data-field="Product" data-val="Olive Oil">Olive Oil</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0.40">0.40</td><td class="col-note" data-field="Notes">US: Section 301 cap 10%. EU CAP ~40% retained (sensitive list; tomatoes/oranges exempt on US side).</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="25">25</td><td class="col-name" data-field="Product" data-val="Fish &amp; Seafood">Fish &amp; Seafood</td><td class="col-num" data-field="US on EU" data-val="0.10">0.10</td><td class="col-num" data-field="EU on US" data-val="0.12">0.12</td><td class="col-note" data-field="Notes">US: Section 301 cap 10%. EU ~12% average with new US TRQs/reduced tariffs (2026 regulations); lobster 0% (retroactive Aug 1, 2025 &ndash; Jul 31, 2030).</td></tr>
+      </tbody>
+    </table>
   </div>
 
-  <!-- CHART 2: Pre-agreement MFN rates -->
   <div class="card">
     <h2>WTO MFN Baseline Rates (pre-2025, for reference)</h2>
     <div class="subtitle">
@@ -129,113 +260,162 @@
     </div>
     <div class="legend">
       <div class="legend-item">
-        <div class="legend-swatch" style="background:oklch(0.55 0.18 25)"></div>
-        <span>🇺🇸 US MFN rate</span>
+        <div class="legend-swatch" style="background:var(--chart-short)"></div>
+        <span>&#127468;&#127462; US MFN rate</span>
       </div>
       <div class="legend-item">
-        <div class="legend-swatch" style="background:oklch(0.55 0.15 230)"></div>
-        <span>🇪🇺 EU MFN rate</span>
+        <div class="legend-swatch" style="background:var(--chart-long)"></div>
+        <span>&#127466;&#127475; EU MFN rate</span>
       </div>
     </div>
     <div class="chart-container">
       <svg id="chart2"></svg>
     </div>
+    <table id="mfnTable" class="grid-table no-sticky">
+      <thead>
+        <tr><th class="col-ix" onclick="setSortArrow('mfnTable',0)">Ix</th><th class="col-name" onclick="setSortArrow('mfnTable',1)">Product</th><th class="col-num" onclick="setSortArrow('mfnTable',2)">US MFN</th><th class="col-num" onclick="setSortArrow('mfnTable',3)">EU MFN</th><th class="col-note" onclick="setSortArrow('mfnTable',4)">Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="col-ix" data-field="Ix" data-val="1">1</td><td class="col-name" data-field="Product" data-val="Steel">Steel</td><td class="col-num" data-field="US on EU" data-val="0">0.00</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">Pre-232: 0% MFN (generally). Both low.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="2">2</td><td class="col-name" data-field="Product" data-val="Aluminum">Aluminum</td><td class="col-num" data-field="US on EU" data-val="0.026">0.03</td><td class="col-num" data-field="EU on US" data-val="0.06">0.06</td><td class="col-note" data-field="Notes">US avg 2.6%. EU avg 6%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="3">3</td><td class="col-name" data-field="Product" data-val="Automobiles">Automobiles</td><td class="col-num" data-field="US on EU" data-val="0.025">0.03</td><td class="col-num" data-field="EU on US" data-val="0.10">0.10</td><td class="col-note" data-field="Notes">US 2.5% (famously low). EU 10%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="4">4</td><td class="col-name" data-field="Product" data-val="Auto Parts">Auto Parts</td><td class="col-num" data-field="US on EU" data-val="0.025">0.03</td><td class="col-num" data-field="EU on US" data-val="0.045">0.05</td><td class="col-note" data-field="Notes">US ~2.5%. EU ~3&ndash;4.5%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="5">5</td><td class="col-name" data-field="Product" data-val="Dairy Products">Dairy Products</td><td class="col-num" data-field="US on EU" data-val="0.20">0.20</td><td class="col-num" data-field="EU on US" data-val="0.30">0.30</td><td class="col-note" data-field="Notes">Both heavily protected. US avg ~20%, EU avg ~30%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="6">6</td><td class="col-name" data-field="Product" data-val="Beef &amp; Meat">Beef &amp; Meat</td><td class="col-num" data-field="US on EU" data-val="0.04">0.04</td><td class="col-num" data-field="EU on US" data-val="0.128">0.13</td><td class="col-note" data-field="Notes">US ~4% but EU ~12.8% + hormone ban restrictions.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="7">7</td><td class="col-name" data-field="Product" data-val="Wine &amp; Spirits">Wine &amp; Spirits</td><td class="col-num" data-field="US on EU" data-val="0.05">0.05</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US ~5% on wine. EU 0% on spirits.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="8">8</td><td class="col-name" data-field="Product" data-val="Cereals &amp; Grains">Cereals &amp; Grains</td><td class="col-num" data-field="US on EU" data-val="0.035">0.04</td><td class="col-num" data-field="EU on US" data-val="0.35">0.35</td><td class="col-note" data-field="Notes">US low. EU heavily protected (CAP).</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="9">9</td><td class="col-name" data-field="Product" data-val="Sugar &amp; Confectionery">Sugar &amp; Confectionery</td><td class="col-num" data-field="US on EU" data-val="0.16">0.16</td><td class="col-num" data-field="EU on US" data-val="0.30">0.30</td><td class="col-note" data-field="Notes">Both protected. US TRQ system ~16% avg.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="10">10</td><td class="col-name" data-field="Product" data-val="Chemicals">Chemicals</td><td class="col-num" data-field="US on EU" data-val="0.055">0.06</td><td class="col-num" data-field="EU on US" data-val="0.046">0.05</td><td class="col-note" data-field="Notes">Both moderate/low.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="11">11</td><td class="col-name" data-field="Product" data-val="Pharmaceuticals">Pharmaceuticals</td><td class="col-num" data-field="US on EU" data-val="0">0.00</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">Zero-for-zero agreement.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="12">12</td><td class="col-name" data-field="Product" data-val="Machinery">Machinery</td><td class="col-num" data-field="US on EU" data-val="0.024">0.02</td><td class="col-num" data-field="EU on US" data-val="0.017">0.02</td><td class="col-note" data-field="Notes">Both low.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="13">13</td><td class="col-name" data-field="Product" data-val="Electronics &amp; Semiconductors">Electronics &amp; Semiconductors</td><td class="col-num" data-field="US on EU" data-val="0">0.00</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">ITA &mdash; both 0%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="14">14</td><td class="col-name" data-field="Product" data-val="Textiles &amp; Apparel">Textiles &amp; Apparel</td><td class="col-num" data-field="US on EU" data-val="0.12">0.12</td><td class="col-num" data-field="EU on US" data-val="0.12">0.12</td><td class="col-note" data-field="Notes">Both ~12% avg MFN.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="15">15</td><td class="col-name" data-field="Product" data-val="Footwear">Footwear</td><td class="col-num" data-field="US on EU" data-val="0.11">0.11</td><td class="col-num" data-field="EU on US" data-val="0.08">0.08</td><td class="col-note" data-field="Notes">US ~11%. EU ~8%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="16">16</td><td class="col-name" data-field="Product" data-val="Ceramics &amp; Glass">Ceramics &amp; Glass</td><td class="col-num" data-field="US on EU" data-val="0.06">0.06</td><td class="col-num" data-field="EU on US" data-val="0.05">0.05</td><td class="col-note" data-field="Notes">Both moderate.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="17">17</td><td class="col-name" data-field="Product" data-val="Plastics &amp; Rubber">Plastics &amp; Rubber</td><td class="col-num" data-field="US on EU" data-val="0.04">0.04</td><td class="col-num" data-field="EU on US" data-val="0.04">0.04</td><td class="col-note" data-field="Notes">Both ~4%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="18">18</td><td class="col-name" data-field="Product" data-val="Paper &amp; Pulp">Paper &amp; Pulp</td><td class="col-num" data-field="US on EU" data-val="0">0.00</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">Both 0%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="19">19</td><td class="col-name" data-field="Product" data-val="Furniture">Furniture</td><td class="col-num" data-field="US on EU" data-val="0.025">0.03</td><td class="col-num" data-field="EU on US" data-val="0.027">0.03</td><td class="col-note" data-field="Notes">Both low.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="20">20</td><td class="col-name" data-field="Product" data-val="Aircraft (civil)">Aircraft (civil)</td><td class="col-num" data-field="US on EU" data-val="0">0.00</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">WTO Agreement &mdash; 0%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="21">21</td><td class="col-name" data-field="Product" data-val="Copper">Copper</td><td class="col-num" data-field="US on EU" data-val="0.03">0.03</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US ~3% MFN. EU 0%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="22">22</td><td class="col-name" data-field="Product" data-val="Lumber &amp; Wood">Lumber &amp; Wood</td><td class="col-num" data-field="US on EU" data-val="0.03">0.03</td><td class="col-num" data-field="EU on US" data-val="0">0.00</td><td class="col-note" data-field="Notes">US ~3% MFN. EU 0%.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="23">23</td><td class="col-name" data-field="Product" data-val="Tobacco">Tobacco</td><td class="col-num" data-field="US on EU" data-val="0.15">0.15</td><td class="col-num" data-field="EU on US" data-val="0.10">0.10</td><td class="col-note" data-field="Notes">US higher MFN. EU moderate.</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="24">24</td><td class="col-name" data-field="Product" data-val="Olive Oil">Olive Oil</td><td class="col-num" data-field="US on EU" data-val="0.05">0.05</td><td class="col-num" data-field="EU on US" data-val="0.40">0.40</td><td class="col-note" data-field="Notes">US low. EU very high (CAP).</td></tr>
+        <tr><td class="col-ix" data-field="Ix" data-val="25">25</td><td class="col-name" data-field="Product" data-val="Fish &amp; Seafood">Fish &amp; Seafood</td><td class="col-num" data-field="US on EU" data-val="0.05">0.05</td><td class="col-num" data-field="EU on US" data-val="0.12">0.12</td><td class="col-note" data-field="Notes">US low. EU moderate.</td></tr>
+      </tbody>
+    </table>
   </div>
 
-  <div class="sources">
-    <h3>Data Sources & Context</h3>
+  <div class="card sources">
+    <h3>Data Sources &amp; Context</h3>
     <ul>
-      <li><strong>US-EU Framework Agreement</strong> (September 2025) — European Commission & USTR joint text.<br>
-        <a href="https://policy.trade.ec.europa.eu/" target="_blank">EC Trade Policy</a> ·
-        <a href="https://ustr.gov/" target="_blank">USTR</a></li>
-      <li><strong>Section 232 tariffs</strong> — Steel 50%, Aluminum 50% (doubled June 2025). Remain in effect post-IEEPA ruling.<br>
+      <li><strong>US-EU Framework Agreement / Joint Statement</strong> (Aug 21, 2025) &mdash; US commits to 15% all-inclusive ceiling (higher of MFN or 15%); MFN-only for cork, aircraft/parts, generic pharmaceuticals, chemical precursors (from Sep 1, 2025); autos reduced to 15% combined (from Aug 1, 2025).<br>
+        <a href="https://useu.usmission.gov/joint-statement-on-a-united-states-european-union-framework-on-an-agreement-on-reciprocal-fair-and-balanced-trade/" target="_blank">Joint Statement</a> &middot;
+        <a href="https://www.federalregister.gov/documents/2025/09/25/2025-18660/implementing-certain-tariff-related-elements-of-the-us-eu-framework-on-an-agreement-on-reciprocal" target="_blank">Federal Register (Sep 25, 2025)</a></li>
+      <li><strong>US Supreme Court, Learning Resources v. Trump / Trump v. V.O.S. Selections</strong> (Feb 20, 2026, 6-3) &mdash; IEEPA does not authorize presidential tariffs; reciprocal and fentanyl tariffs invalidated; refunds to be litigated at the CIT.<br>
+        <a href="https://www.supremecourt.gov/opinions/25pdf/24-1287_4gcj.pdf" target="_blank">Opinion (24-1287)</a> &middot;
+        <a href="https://www.congress.gov/crs-product/LSB11398" target="_blank">CRS Legal Sidebar</a></li>
+      <li><strong>Section 122 surcharge</strong> (Feb 24 &ndash; Jul 24, 2026) &mdash; 10% global import surcharge under the Trade Act of 1974 (150-day statutory limit); expired Jul 24, 2026 with no congressional extension; legality on appeal at the Federal Circuit.<br>
+        <a href="https://www.whitehouse.gov/presidential-actions/2026/02/imposing-a-temporary-import-surcharge-to-address-fundamental-international-payments-problems/" target="_blank">Proclamation</a></li>
+      <li><strong>Section 301 forced-labor tariffs</strong> (effective Jul 24, 2026) &mdash; 10&ndash;12.5% on 60 economies including the EU; EU combined MFN+Section 301 rate generally capped at 10%. Also: Section 301 'overcapacity' investigation (EU included) ongoing; Jul 24, 2026 presidential threat of further Section 301 tariffs on the EU over tech-fine disputes.<br>
+        <a href="https://ustr.gov/" target="_blank">USTR</a> &middot;
+        <a href="https://www.honigman.com/alert-3462" target="_blank">Honigman alert</a></li>
+      <li><strong>Section 232 tariffs</strong> &mdash; steel/aluminum 50% (doubled Jun 2025), copper 50% (Proclamation 10962, Aug 2025), autos/parts 15% combined for the EU; pharmaceuticals/semiconductors/lumber actions pending, capped &le;15% for the EU. Unaffected by the IEEPA ruling.<br>
         <a href="https://www.whitehouse.gov/" target="_blank">White House proclamations</a></li>
-      <li><strong>US Supreme Court IEEPA ruling</strong> (Feb 20, 2026) — Invalidated IEEPA-based tariffs.<br>
-        <a href="https://www.supremecourt.gov/" target="_blank">supremecourt.gov</a></li>
-      <li><strong>WTO Tariff Profiles</strong> — MFN applied rates by HS chapter.<br>
+      <li><strong>EU Implementing Regulations</strong> (Council final approval Jun 25, 2026) &mdash; eliminate remaining EU customs duties on US industrial goods; TRQs/reduced tariffs for US seafood and non-sensitive agricultural products; lobster duty-free (retroactive Aug 1, 2025, to Jul 31, 2030); main regulation applies to end-2029 with safeguard/suspension mechanisms. Implementing Regulations followed the European Parliament's brief Jan 2026 freeze during the Greenland tariff episode (threatened Jan 17, withdrawn Jan 21, 2026).<br>
+        <a href="https://www.consilium.europa.eu/en/press/press-releases/2026/06/25/eu-us-trade-council-gives-final-approval-for-the-tariff-commitments-under-joint-statement/" target="_blank">Council press release</a> &middot;
+        <a href="https://policy.trade.ec.europa.eu/" target="_blank">EC Trade Policy</a></li>
+      <li><strong>WTO Tariff Profiles</strong> &mdash; MFN applied rates by HS chapter (baseline table).<br>
         <a href="https://www.wto.org/english/res_e/statis_e/statis_e.htm" target="_blank">WTO Statistics</a></li>
-      <li><strong>Tax Foundation / Yale Budget Lab</strong> — Analysis of effective US tariff rates 2025–2026.<br>
-        <a href="https://taxfoundation.org/" target="_blank">taxfoundation.org</a> ·
-        <a href="https://budgetlab.yale.edu/" target="_blank">Yale Budget Lab</a></li>
+      <li><strong>Tax Foundation / Yale Budget Lab / CRS</strong> &mdash; analysis of effective US tariff rates 2025&ndash;2026.<br>
+        <a href="https://taxfoundation.org/" target="_blank">taxfoundation.org</a> &middot;
+        <a href="https://budgetlab.yale.edu/" target="_blank">Yale Budget Lab</a> &middot;
+        <a href="https://www.congress.gov/crs-product/IF13107" target="_blank">CRS IF13107</a></li>
     </ul>
     <div class="note">
-      <strong>Note:</strong> Tariff rates shown are weighted averages or representative rates for each product category.
-      Actual rates vary by specific HS code / tariff line. "EU on US" includes the EU's retaliatory tariffs where applicable.
-      The EU committed to eliminating tariffs on all US industrial goods under the Framework Agreement, pending EU legislation.
-      Numbers may change as the Supreme Court ruling's implementation develops.
+      <strong>Note:</strong> Tariff rates shown are weighted averages or representative rates for each product category; actual rates vary by specific HS code / tariff line and by exemption schedule.
+      "EU on US" reflects the EU's 2026 Implementing Regulations (industrial goods 0%) &mdash; the EU's retaliatory tariffs (adopted Jul 2025 against &euro;90bn+ of US goods) remain suspended since Aug 5, 2025, with repeated extensions.
+      The US 15% Framework ceiling remains the agreed cap, but the current general rate on most EU goods is ~10% (MFN + Section 301, combined cap); a pending Section 301 overcapacity investigation and the threatened tech-fines tariff could push rates back toward the 15% ceiling.
+      Data vintage: September 10, 2026. Numbers may change as Section 122 litigation and pending Section 232/301 actions develop.
     </div>
   </div>
-</div>
 
-<div class="tooltip-chart" id="tooltip">
-  <div class="tt-name" id="ttName"></div>
-  <div class="tt-vals" id="ttVals"></div>
-</div>
+  <div class="footer">
+    <p>US&ndash;EU Tariffs by Product v1.1 &copy; 2026 Dan Micsa, PhD (dmicsa@gmail.com)</p>
+    <p>Generated on 2026-09-10 &middot; Data vintage: September 10, 2026</p>
+  </div>
+
+  <div class="tooltip-chart" id="tooltip">
+    <div class="tt-name" id="ttName"></div>
+    <div class="tt-vals" id="ttVals"></div>
+  </div>
 
 <script>
 // ─── TARIFF DATA ─────────────────────────────────────────────────────
-// Current effective rates as of Feb 2026 (post-IEEPA ruling + Framework Agreement)
+// Current effective rates as of Sep 2026 (post-IEEPA ruling; Section 122 expired;
+// Section 301 forced-labor tariffs; EU Implementing Regulations in force)
 const currentTariffs = [
-  {product:"Steel",                  usOnEU:50,  euOnUS:25,  note:"Section 232 (doubled Jun 2025). EU retaliatory 25%."},
-  {product:"Aluminum",               usOnEU:50,  euOnUS:25,  note:"Section 232 (doubled Jun 2025). EU retaliatory 25%."},
-  {product:"Automobiles",            usOnEU:15,  euOnUS:10,  note:"Reduced from 27.5% to 15% under Framework. EU MFN 10%, moving to 0%."},
-  {product:"Auto Parts",             usOnEU:15,  euOnUS:4.5, note:"Framework Agreement caps at 15%. EU rate ~3–4.5%."},
-  {product:"Dairy Products",         usOnEU:15,  euOnUS:30,  note:"Framework 15% cap. EU avg ~30% on US dairy (high MFN + TRQs)."},
-  {product:"Beef & Meat",            usOnEU:15,  euOnUS:12.8,note:"US Framework 15%. EU avg ~12.8% + strict SPS measures."},
-  {product:"Wine & Spirits",         usOnEU:15,  euOnUS:0,   note:"US Framework 15%. EU: 0% on US wine (already duty-free)."},
-  {product:"Cereals & Grains",       usOnEU:3.5, euOnUS:35,  note:"US MFN ~3.5%. EU heavily protects grains (CAP), avg ~35%."},
-  {product:"Sugar & Confectionery",  usOnEU:15,  euOnUS:30,  note:"Both heavily protected. US TRQ system. EU high duties."},
-  {product:"Chemicals",              usOnEU:5.5, euOnUS:4.6, note:"Both relatively low. Heading to 0% under Framework."},
-  {product:"Pharmaceuticals",        usOnEU:0,   euOnUS:0,   note:"Both 0% (WTO Pharma Agreement, zero-for-zero)."},
-  {product:"Machinery",              usOnEU:2.4, euOnUS:1.7, note:"Low MFN rates. Framework targets 0%."},
-  {product:"Electronics & Semiconductors",usOnEU:0, euOnUS:0, note:"ITA (WTO Info Tech Agreement) — 0% on both sides."},
-  {product:"Textiles & Apparel",     usOnEU:12,  euOnUS:12,  note:"Both ~12% avg. IEEPA surcharges removed by Court."},
-  {product:"Footwear",               usOnEU:11,  euOnUS:8,   note:"US avg ~11%. EU avg ~8%."},
-  {product:"Ceramics & Glass",       usOnEU:6,   euOnUS:5,   note:"Moderate rates both sides."},
-  {product:"Plastics & Rubber",      usOnEU:4,   euOnUS:4,   note:"Similar rates ~4%. Framework targets reduction."},
-  {product:"Paper & Pulp",           usOnEU:0,   euOnUS:0,   note:"Essentially tariff-free both directions."},
-  {product:"Furniture",              usOnEU:2.5, euOnUS:2.7, note:"Low MFN rates both sides."},
-  {product:"Aircraft (civil)",       usOnEU:0,   euOnUS:0,   note:"WTO Agreement on Trade in Civil Aircraft — 0%."},
-  {product:"Copper",                 usOnEU:25,  euOnUS:0,   note:"Section 232 expansion (2025). EU: 0% MFN."},
-  {product:"Lumber & Wood",          usOnEU:15,  euOnUS:0,   note:"US Framework ceiling. EU: 0% on most wood."},
-  {product:"Tobacco",                usOnEU:15,  euOnUS:10,  note:"US Framework. EU moderate rate + excise."},
-  {product:"Olive Oil",              usOnEU:5,   euOnUS:40,  note:"US low MFN. EU heavily protects (CAP)."},
-  {product:"Fish & Seafood",         usOnEU:5,   euOnUS:12,  note:"US low. EU avg ~12%, with Framework concessions coming."},
+  {product:"Steel",                  usOnEU:0.50, euOnUS:0,     note:"Section 232 (50% since Jun 2025). EU retaliation suspended; EU duties on US steel now 0%."},
+  {product:"Aluminum",               usOnEU:0.50, euOnUS:0,     note:"Section 232 (50% since Jun 2025). EU retaliation suspended; TRQ cooperation under discussion."},
+  {product:"Copper",                 usOnEU:0.50, euOnUS:0,     note:"Section 232 Proclamation 10962 (50% since Aug 2025). EU MFN 0%."},
+  {product:"Automobiles",            usOnEU:0.15, euOnUS:0,     note:"Section 232 combined 15% (from 27.5%, Aug 2025). EU 10% MFN eliminated on US autos."},
+  {product:"Auto Parts",             usOnEU:0.15, euOnUS:0,     note:"Section 232 combined 15% cap. EU duties eliminated (2026 regulations)."},
+  {product:"Dairy Products",         usOnEU:0.10, euOnUS:0.30,  note:"Section 301 combined cap 10%. EU ~30% retained; new US dairy TRQs."},
+  {product:"Beef & Meat",            usOnEU:0.10, euOnUS:0.128, note:"Section 301 cap 10%; some ag exemptions. EU ~12.8% + SPS measures."},
+  {product:"Wine & Spirits",         usOnEU:0.10, euOnUS:0,     note:"Section 301 cap 10%. EU: 0% on US wine & spirits."},
+  {product:"Cereals & Grains",       usOnEU:0.10, euOnUS:0.35,  note:"Section 301 cap 10%. EU CAP ~35% retained; some TRQ access."},
+  {product:"Sugar & Confectionery",  usOnEU:0.10, euOnUS:0.30,  note:"Section 301 cap 10%. EU sensitive list ~30% with limited TRQs."},
+  {product:"Chemicals",              usOnEU:0.10, euOnUS:0,     note:"Section 301 cap 10%. EU duties eliminated on US industrial chemicals."},
+  {product:"Pharmaceuticals",        usOnEU:0,    euOnUS:0,     note:"US 0% (pending Section 232 capped \u226415% for EU). EU zero-for-zero."},
+  {product:"Machinery",              usOnEU:0.10, euOnUS:0,     note:"Section 301 cap 10% (MFN ~2.4%). EU duties eliminated (2026 regulations)."},
+  {product:"Electronics & Semiconductors",usOnEU:0, euOnUS:0,   note:"ITA 0% both sides; pending Section 232 semis capped \u226415% for EU."},
+  {product:"Textiles & Apparel",     usOnEU:0.10, euOnUS:0,     note:"Section 301 combined cap 10% (below ~12% MFN avg). EU duties eliminated."},
+  {product:"Footwear",               usOnEU:0.10, euOnUS:0,     note:"Section 301 cap 10% (was ~11% MFN). EU duties eliminated."},
+  {product:"Ceramics & Glass",       usOnEU:0.10, euOnUS:0,     note:"Section 301 cap 10%. EU duties eliminated."},
+  {product:"Plastics & Rubber",      usOnEU:0.10, euOnUS:0,     note:"Section 301 cap 10%. EU duties eliminated."},
+  {product:"Paper & Pulp",           usOnEU:0.10, euOnUS:0,     note:"US MFN 0% + Section 301 (capped 10%). EU 0%."},
+  {product:"Furniture",              usOnEU:0.10, euOnUS:0,     note:"Section 301 cap 10% (MFN ~2.5%). EU duties eliminated."},
+  {product:"Aircraft (civil)",       usOnEU:0,    euOnUS:0,     note:"Framework: MFN-only (0%) on EU aircraft & parts since Sep 1, 2025. EU 0%."},
+  {product:"Lumber & Wood",          usOnEU:0.10, euOnUS:0,     note:"Section 301 cap 10%; pending Section 232 lumber capped \u226415% for EU. EU 0%."},
+  {product:"Tobacco",                usOnEU:0.10, euOnUS:0.10,  note:"Section 301 cap 10%. EU moderate MFN ~10% retained."},
+  {product:"Olive Oil",              usOnEU:0.10, euOnUS:0.40,  note:"Section 301 cap 10%. EU CAP ~40% retained (sensitive list)."},
+  {product:"Fish & Seafood",         usOnEU:0.10, euOnUS:0.12,  note:"Section 301 cap 10%. EU ~12% with new US TRQs/reduced rates; lobster 0%."},
 ];
 
 // WTO MFN baseline (pre-2025 escalation)
 const mfnTariffs = [
-  {product:"Steel",                  usOnEU:0,   euOnUS:0,   note:"Pre-232: 0% MFN (generally). Both low."},
-  {product:"Aluminum",               usOnEU:2.6, euOnUS:6,   note:"US avg 2.6%. EU avg 6%."},
-  {product:"Automobiles",            usOnEU:2.5, euOnUS:10,  note:"US 2.5% (famously low). EU 10%."},
-  {product:"Auto Parts",             usOnEU:2.5, euOnUS:4.5, note:"US ~2.5%. EU ~3–4.5%."},
-  {product:"Dairy Products",         usOnEU:20,  euOnUS:30,  note:"Both heavily protected. US avg ~20%, EU avg ~30%."},
-  {product:"Beef & Meat",            usOnEU:4,   euOnUS:12.8,note:"US ~4% but EU ~12.8% + hormone ban restrictions."},
-  {product:"Wine & Spirits",         usOnEU:5,   euOnUS:0,   note:"US ~5% on wine. EU 0% on spirits."},
-  {product:"Cereals & Grains",       usOnEU:3.5, euOnUS:35,  note:"US low. EU heavily protected (CAP)."},
-  {product:"Sugar & Confectionery",  usOnEU:16,  euOnUS:30,  note:"Both protected. US has TRQ system ~16% avg."},
-  {product:"Chemicals",              usOnEU:5.5, euOnUS:4.6, note:"Both moderate/low."},
-  {product:"Pharmaceuticals",        usOnEU:0,   euOnUS:0,   note:"Zero-for-zero agreement."},
-  {product:"Machinery",              usOnEU:2.4, euOnUS:1.7, note:"Both low."},
-  {product:"Electronics & Semiconductors",usOnEU:0,euOnUS:0, note:"ITA — both 0%."},
-  {product:"Textiles & Apparel",     usOnEU:12,  euOnUS:12,  note:"Both ~12% avg MFN."},
-  {product:"Footwear",               usOnEU:11,  euOnUS:8,   note:"US ~11%. EU ~8%."},
-  {product:"Ceramics & Glass",       usOnEU:6,   euOnUS:5,   note:"Both moderate."},
-  {product:"Plastics & Rubber",      usOnEU:4,   euOnUS:4,   note:"Both ~4%."},
-  {product:"Paper & Pulp",           usOnEU:0,   euOnUS:0,   note:"Both 0%."},
-  {product:"Furniture",              usOnEU:2.5, euOnUS:2.7, note:"Both low."},
-  {product:"Aircraft (civil)",       usOnEU:0,   euOnUS:0,   note:"WTO Agreement — 0%."},
-  {product:"Copper",                 usOnEU:3,   euOnUS:0,   note:"US ~3% MFN. EU 0%."},
-  {product:"Lumber & Wood",          usOnEU:3,   euOnUS:0,   note:"US ~3% MFN. EU 0%."},
-  {product:"Tobacco",                usOnEU:15,  euOnUS:10,  note:"US higher MFN. EU moderate."},
-  {product:"Olive Oil",              usOnEU:5,   euOnUS:40,  note:"US low. EU very high (CAP)."},
-  {product:"Fish & Seafood",         usOnEU:5,   euOnUS:12,  note:"US low. EU moderate."},
+  {product:"Steel",                  usOnEU:0,    euOnUS:0,     note:"Pre-232: 0% MFN (generally). Both low."},
+  {product:"Aluminum",               usOnEU:0.026,euOnUS:0.06,  note:"US avg 2.6%. EU avg 6%."},
+  {product:"Automobiles",            usOnEU:0.025,euOnUS:0.10,  note:"US 2.5% (famously low). EU 10%."},
+  {product:"Auto Parts",             usOnEU:0.025,euOnUS:0.045, note:"US ~2.5%. EU ~3\u20134.5%."},
+  {product:"Dairy Products",         usOnEU:0.20, euOnUS:0.30,  note:"Both heavily protected. US avg ~20%, EU avg ~30%."},
+  {product:"Beef & Meat",            usOnEU:0.04, euOnUS:0.128, note:"US ~4% but EU ~12.8% + hormone ban restrictions."},
+  {product:"Wine & Spirits",         usOnEU:0.05, euOnUS:0,     note:"US ~5% on wine. EU 0% on spirits."},
+  {product:"Cereals & Grains",       usOnEU:0.035,euOnUS:0.35,  note:"US low. EU heavily protected (CAP)."},
+  {product:"Sugar & Confectionery",  usOnEU:0.16, euOnUS:0.30,  note:"Both protected. US TRQ system ~16% avg."},
+  {product:"Chemicals",              usOnEU:0.055,euOnUS:0.046, note:"Both moderate/low."},
+  {product:"Pharmaceuticals",        usOnEU:0,    euOnUS:0,     note:"Zero-for-zero agreement."},
+  {product:"Machinery",              usOnEU:0.024,euOnUS:0.017, note:"Both low."},
+  {product:"Electronics & Semiconductors",usOnEU:0,euOnUS:0,    note:"ITA \u2014 both 0%."},
+  {product:"Textiles & Apparel",     usOnEU:0.12, euOnUS:0.12,  note:"Both ~12% avg MFN."},
+  {product:"Footwear",               usOnEU:0.11, euOnUS:0.08,  note:"US ~11%. EU ~8%."},
+  {product:"Ceramics & Glass",       usOnEU:0.06, euOnUS:0.05,  note:"Both moderate."},
+  {product:"Plastics & Rubber",      usOnEU:0.04, euOnUS:0.04,  note:"Both ~4%."},
+  {product:"Paper & Pulp",           usOnEU:0,    euOnUS:0,     note:"Both 0%."},
+  {product:"Furniture",              usOnEU:0.025,euOnUS:0.027, note:"Both low."},
+  {product:"Aircraft (civil)",       usOnEU:0,    euOnUS:0,     note:"WTO Agreement \u2014 0%."},
+  {product:"Copper",                 usOnEU:0.03, euOnUS:0,     note:"US ~3% MFN. EU 0%."},
+  {product:"Lumber & Wood",          usOnEU:0.03, euOnUS:0,     note:"US ~3% MFN. EU 0%."},
+  {product:"Tobacco",                usOnEU:0.15, euOnUS:0.10,  note:"US higher MFN. EU moderate."},
+  {product:"Olive Oil",              usOnEU:0.05, euOnUS:0.40,  note:"US low. EU very high (CAP)."},
+  {product:"Fish & Seafood",         usOnEU:0.05, euOnUS:0.12,  note:"US low. EU moderate."},
 ];
 
 // ─── TOOLTIP ─────────────────────────────────────────────────────────
 const tooltip = document.getElementById("tooltip");
 const ttName  = document.getElementById("ttName");
 const ttVals  = document.getElementById("ttVals");
+
+function fmtPct(v) { return Number((v * 100).toFixed(1)) + "%"; }
 
 // ─── HORIZONTAL BAR CHART RENDERER ──────────────────────────────────
 function renderHBarChart(svgId, data) {
@@ -250,7 +430,7 @@ function renderHBarChart(svgId, data) {
   const plotH = N * rowH;
   const totalW = margin.left + plotW + margin.right;
   const totalH = margin.top + plotH + margin.bottom;
-  const maxV = 55; // max tariff %
+  const maxV = 0.55; // max tariff rate (fraction)
 
   function xScale(v) { return margin.left + (v / maxV) * plotW; }
 
@@ -261,13 +441,12 @@ function renderHBarChart(svgId, data) {
   svg.innerHTML = "";
 
   // X gridlines
-  for (let v = 0; v <= 50; v += 10) {
+  for (let v = 0; v <= 0.5; v += 0.1) {
     const x = xScale(v);
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("x1", x); line.setAttribute("x2", x);
     line.setAttribute("y1", margin.top); line.setAttribute("y2", margin.top + plotH);
-    line.setAttribute("stroke", v === 0 ? "#8b90a0" : "#2a2e3a");
-    line.setAttribute("stroke-width", v === 0 ? 1 : 0.5);
+    line.setAttribute("class", v === 0 ? "axisline" : "gridline");
     svg.appendChild(line);
 
     // X label
@@ -275,9 +454,9 @@ function renderHBarChart(svgId, data) {
     label.setAttribute("x", x);
     label.setAttribute("y", margin.top + plotH + 16);
     label.setAttribute("text-anchor", "middle");
-    label.setAttribute("fill", "#8b90a0");
+    label.setAttribute("class", "tick-label");
     label.setAttribute("font-size", "9");
-    label.textContent = v + "%";
+    label.textContent = fmtPct(v);
     svg.appendChild(label);
   }
 
@@ -291,22 +470,20 @@ function renderHBarChart(svgId, data) {
     lbl.setAttribute("x", margin.left - 8);
     lbl.setAttribute("y", cy + 4);
     lbl.setAttribute("text-anchor", "end");
-    lbl.setAttribute("fill", "#e4e6ed");
+    lbl.setAttribute("class", "prod-label");
     lbl.setAttribute("font-size", "10");
-    lbl.setAttribute("font-weight", "600");
     lbl.textContent = d.product;
     svg.appendChild(lbl);
 
-    // US bar (top of pair) — red/warm
+    // US bar (top of pair)
     const usW = Math.max((d.usOnEU / maxV) * plotW, 0);
     const usBar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    usBar.setAttribute("class", "bar-rect");
+    usBar.setAttribute("class", "bar-rect us-bar");
     usBar.setAttribute("x", xScale(0));
     usBar.setAttribute("y", cy - barH - 1);
     usBar.setAttribute("width", usW);
     usBar.setAttribute("height", barH);
     usBar.setAttribute("rx", 2);
-    usBar.setAttribute("fill", "oklch(0.55 0.18 25)");
     svg.appendChild(usBar);
 
     // US value
@@ -314,23 +491,21 @@ function renderHBarChart(svgId, data) {
       const usVal = document.createElementNS("http://www.w3.org/2000/svg", "text");
       usVal.setAttribute("x", xScale(0) + usW + 4);
       usVal.setAttribute("y", cy - barH / 2 + 3);
-      usVal.setAttribute("fill", "oklch(0.65 0.15 25)");
+      usVal.setAttribute("class", "us-val");
       usVal.setAttribute("font-size", "8");
-      usVal.setAttribute("font-weight", "700");
-      usVal.textContent = d.usOnEU + "%";
+      usVal.textContent = fmtPct(d.usOnEU);
       svg.appendChild(usVal);
     }
 
-    // EU bar (bottom of pair) — blue
+    // EU bar (bottom of pair)
     const euW = Math.max((d.euOnUS / maxV) * plotW, 0);
     const euBar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    euBar.setAttribute("class", "bar-rect");
+    euBar.setAttribute("class", "bar-rect eu-bar");
     euBar.setAttribute("x", xScale(0));
     euBar.setAttribute("y", cy + 1);
     euBar.setAttribute("width", euW);
     euBar.setAttribute("height", barH);
     euBar.setAttribute("rx", 2);
-    euBar.setAttribute("fill", "oklch(0.55 0.15 230)");
     svg.appendChild(euBar);
 
     // EU value
@@ -338,10 +513,9 @@ function renderHBarChart(svgId, data) {
       const euVal = document.createElementNS("http://www.w3.org/2000/svg", "text");
       euVal.setAttribute("x", xScale(0) + euW + 4);
       euVal.setAttribute("y", cy + barH / 2 + 5);
-      euVal.setAttribute("fill", "oklch(0.65 0.12 230)");
+      euVal.setAttribute("class", "eu-val");
       euVal.setAttribute("font-size", "8");
-      euVal.setAttribute("font-weight", "700");
-      euVal.textContent = d.euOnUS + "%";
+      euVal.textContent = fmtPct(d.euOnUS);
       svg.appendChild(euVal);
     }
 
@@ -350,9 +524,9 @@ function renderHBarChart(svgId, data) {
       bar.addEventListener("mouseenter", () => {
         ttName.textContent = d.product;
         ttVals.innerHTML =
-          `<span style="color:oklch(0.65 0.15 25)">🇺🇸 US on EU: ${d.usOnEU}%</span><br>` +
-          `<span style="color:oklch(0.65 0.12 230)">🇪🇺 EU on US: ${d.euOnUS}%</span><br>` +
-          `<span style="color:var(--fg-dim)">${d.note}</span>`;
+          `<span class="tt-us">\uD83C\uDDFA\uD83C\uDDF8 US on EU: ${fmtPct(d.usOnEU)}</span><br>` +
+          `<span class="tt-eu">\uD83C\uDDEA\uD83C\uDDFA EU on US: ${fmtPct(d.euOnUS)}</span><br>` +
+          `<span class="tt-note">${d.note}</span>`;
         tooltip.style.display = "block";
       });
       bar.addEventListener("mousemove", (e) => {
@@ -366,6 +540,46 @@ function renderHBarChart(svgId, data) {
 
 renderHBarChart("chart1", currentTariffs);
 renderHBarChart("chart2", mfnTariffs);
+</script>
+
+<script>
+function updateTableColors() {
+    ['tariffTable', 'mfnTable'].forEach(id => {
+        const table = document.getElementById(id);
+        if (!table) return;
+
+        const cells = table.querySelectorAll('tbody td[data-field][data-val]');
+        cells.forEach(cell => {
+            const field = cell.getAttribute('data-field');
+            const rawVal = parseFloat(cell.getAttribute('data-val'));
+            if (!field || Number.isNaN(rawVal)) return;
+
+            if (field === 'US on EU' || field === 'EU on US') {
+                const colorValue = Math.max(0, Math.min(0.55, rawVal));
+                const rgb = getPaletteColor(colorValue, 0, 0.55, false);
+                applyBackgroundWithContrast(cell, rgb);
+            }
+        });
+    });
+}
+
+(function() {
+    const previousSetPalette = window.setPalette;
+    if (typeof previousSetPalette === 'function') {
+        window.setPalette = function(name) {
+            previousSetPalette(name);
+            updateTableColors();
+        };
+    }
+
+    const previousRenderTable = window.renderTable;
+    window.renderTable = function() {
+        if (typeof previousRenderTable === 'function') {
+            previousRenderTable();
+        }
+        updateTableColors();
+    };
+})();
 </script>
 </body>
 </html>

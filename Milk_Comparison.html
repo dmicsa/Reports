@@ -1,146 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Milk Comparison — Animal vs Plant-Based</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:      #0f1117;
-    --surface: #181b24;
-    --border:  #2a2e3a;
-    --fg:      #e4e6ed;
-    --fg-dim:  #8b90a0;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: var(--bg); color: var(--fg);
-    min-height: 100vh; padding: 2rem;
-  }
-  .container { max-width: 98vw; margin: 0 auto; }
+  <meta charset="UTF-8">
+	<meta name="darkreader-lock">
+  <title>Milk Comparison — Animal vs Plant-Based</title>
+  <link rel="stylesheet" href="https://dmicsa.github.io/HTMLAssets/Theme.css">
+  <style>
+    body { background-color: var(--bg-color); color: var(--fg-color); margin: 20px; transition: background-color 0.3s, color 0.3s; }
+    /* Controls handled by report-header in Theme.css */
+    .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .legend-bar { display: flex; align-items: center; justify-content: center; gap: .5rem; margin: 1rem 0 0; flex-wrap: wrap; }
+    .legend-gradient { width: 200px; height: 12px; border-radius: 4px; background: linear-gradient(90deg, var(--fg-color), var(--bg-color), var(--fg-color)); border: 1px solid var(--fg-color); }
+    .legend-label { font-size: .7rem; color: var(--fg-color); font-weight: 500; }
+    .sources p, .sources li { font-size: .8rem; color: var(--fg-color); }
+    .sources .note { font-size: .75rem; color: var(--fg-color); margin-top: .8rem; border-top: 1px solid var(--fg-color); padding-top: .8rem; line-height: 1.6; }
+      /* Numeric columns 50% wider (Theme.css pins .col-num at 80px) */
+    .grid-table td.col-num, .grid-table th.col-num {
+      width: 120px !important;
+      min-width: 120px !important;
+      max-width: 120px !important;
+    }</style>
+  <script src="https://dmicsa.github.io/HTMLAssets/Standard.js"></script>
+  <script>
+    // --- Local State ---
+    let usePercent = false;
+    let currentSortCol = -1;
+    let currentSortAsc = true;
 
-  header { text-align: center; margin-bottom: 1.5rem; }
-  header h1 {
-    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
-    color: #FDF6E3; margin-bottom: .4rem;
-  }
-  header p { color: var(--fg-dim); font-size: .9rem; }
+    // --- Helpers ---
+    function togglePercent() {
+      usePercent = !usePercent;
+      const btn = document.getElementById('percentToggle');
+      if(btn) btn.classList.toggle('active', usePercent);
+      try { localStorage.setItem('ms_percent', usePercent); } catch(e){}
+      updateNumberFormat();
+    }
 
-  .card {
-    background: var(--surface);
-    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
-    position: relative; overflow-x: auto;
-  }
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
-  }
+    function updateNumberFormat() {
+        const table = document.getElementById('milkTable');
+        if(!table) return;
 
-  table {
-    width: 100%; border-collapse: collapse; font-size: .82rem;
-    white-space: nowrap;
-  }
-  thead th {
-    background: #1e2130; position: sticky; top: 0;
-    padding: .65rem .6rem; text-align: right;
-    border-bottom: 2px solid var(--border);
-    cursor: pointer; user-select: none;
-    color: var(--fg-dim); font-weight: 600; font-size: .72rem;
-    text-transform: uppercase; letter-spacing: .04em;
-    transition: color 0.15s;
-  }
-  thead th:hover { color: var(--fg); }
-  thead th:first-child { text-align: left; }
-  thead th .arrow { font-size: .65rem; margin-left: .2rem; opacity: 0.4; }
-  thead th.sorted .arrow { opacity: 1; color: oklch(0.6 0.15 143); }
-  thead th.sorted { color: var(--fg); }
+		// Fields that can be toggled to % — none in this report (no % toggle button shown)
+		const pctFields = [];
+		const srFields = [];
 
-  tbody td {
-    padding: .55rem .6rem; text-align: right;
-    border-bottom: 1px solid #1e222e;
-  }
-  tbody td:first-child {
-    text-align: left; font-weight: 600; color: var(--fg);
-    position: sticky; left: 0; background: var(--surface); z-index: 1;
-  }
-  tbody td:nth-child(2) {
-    text-align: left; color: var(--fg-dim); font-size: .75rem;
-  }
-  tbody tr:hover td { background: #1c2035; }
-  tbody tr:hover td:first-child { background: #1c2035; }
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            Array.from(row.children).forEach(cell => {
+                const f = cell.getAttribute('data-field');
+				const val = parseFloat(cell.getAttribute('data-val'));
+				if (isNaN(val)) return;
 
-  .score-cell {
-    font-weight: 800; font-size: .95rem;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  }
+				if (pctFields.includes(f)) {
+					cell.textContent = usePercent
+						? (val * 100).toFixed(1) + '%'
+						: val.toFixed(2);
+				} else if (srFields.includes(f)) {
+					cell.textContent = val.toFixed(2);
+                }
+            });
+        });
+    }
 
-  .section-row td {
-    background: #141620 !important; padding: .45rem .6rem;
-    font-weight: 800; font-size: .72rem; text-transform: uppercase;
-    letter-spacing: .06em; color: var(--fg-dim); border-bottom: 2px solid var(--border);
-    text-align: left !important;
-  }
+    function setSortArrow(colIndex) {
+      const table = document.getElementById('milkTable');
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      const ths = Array.from(table.querySelectorAll('thead th'));
+      const trs = Array.from(tbody.querySelectorAll('tr'));
 
-  .legend-bar {
-    display: flex; align-items: center; justify-content: center;
-    gap: .5rem; margin: 1rem 0 0; flex-wrap: wrap;
-  }
-  .legend-gradient {
-    width: 200px; height: 12px; border-radius: 4px;
-    background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143));
-  }
-  .legend-label { font-size: .7rem; color: var(--fg-dim); font-weight: 500; }
+      if (currentSortCol === colIndex) {
+          currentSortAsc = !currentSortAsc;
+      } else {
+          currentSortCol = colIndex;
+          currentSortAsc = true;
+		  if (colIndex > 1) currentSortAsc = false;
+      }
 
-  .sources {
-    background: var(--surface);
-    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
-  }
-  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
-  .sources ul { list-style: none; padding: 0; }
-  .sources li {
-    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
-    padding-left: 1rem; position: relative; line-height: 1.5;
-  }
-  .sources li::before { content: '→'; position: absolute; left: 0; }
-  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
-  .sources a:hover { text-decoration: underline; }
-  .sources .note {
-    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
-    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
-  }
-</style>
-</head>
-<body>
-<div class="container">
+      ths.forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+      const th = ths[colIndex];
+      if (th) th.classList.add(currentSortAsc ? 'sort-asc' : 'sort-desc');
 
-  <header>
+      const ascMult = currentSortAsc ? 1 : -1;
+
+      trs.sort((a, b) => {
+          let cellA = a.children[colIndex];
+          let cellB = b.children[colIndex];
+          if (!cellA || !cellB) return 0;
+
+          let valA = cellA.getAttribute('data-val');
+          if (!valA) valA = cellA.innerText.trim();
+          let valB = cellB.getAttribute('data-val');
+          if (!valB) valB = cellB.innerText.trim();
+
+          let fA = parseFloat(valA);
+          let fB = parseFloat(valB);
+
+          if (!isNaN(fA) && !isNaN(fB)) return (fA - fB) * ascMult;
+          return valA.localeCompare(valB) * ascMult;
+      });
+
+      trs.forEach(tr => tbody.appendChild(tr));
+      if (typeof updateTableColors === 'function') updateTableColors();
+    }
+
+
+
+    const renderTable = updateTableColors;
+
+    document.addEventListener('DOMContentLoaded', () => {
+       initStandard();
+       setSortArrow(0);
+       try {
+          // If stored percent preference is true, toggle it ON (which runs updateNumberFormat)
+          if(localStorage.getItem('ms_percent') === 'true') togglePercent();
+          // Otherwise, run updateNumberFormat explicitly to ensure default 2-decimal formatting
+          else updateNumberFormat();
+       } catch(e) {
+          updateNumberFormat();
+       }
+		 refreshMetaChips(document);
+       updateTableColors();
+    });
+  </script></head><body class="solarized-light">
+  <div class="report-header">
     <h1>Milk Comparison — Animal vs Plant-Based</h1>
-    <p>10 key nutrients per 100 ml, normalized, sorted by composite nutrition score · RG palette (OKLCH)</p>
-    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
-  </header>
+  <div class="controls-group">
+    <div class="palette-dropdown">
+      <input type="checkbox" id="palette-toggle">
+      <label for="palette-toggle" class="palette-button" id="palette-btn-label">
+        <span id="current-palette-name">Loading...</span>
+      </label>
+      <div class="palette-menu" id="palette-menu"></div>
+    </div>
+    <select id="themeSelect" onchange="setTheme(this.value)" title="Select Theme">
+      <option value="solarized-light" selected>Solarized Light (default)</option>
+      <option value="dark">Dark</option>
+      <option value="kiwi-dark">Kiwi Dark</option>
+      <option value="kiwi-light">Kiwi Light</option>
+      <option value="light">Light</option>
+      <option value="mint-haze">Mint Haze</option>
+      <option value="mint-haze-dark">Mint Haze Dark</option>
+      <option value="oil">Oil</option>
+      <option value="petal-blush">Petal Blush</option>
+      <option value="petal-blush-dark">Petal Blush Dark</option>
+      <option value="rose-linen">Rose Linen</option>
+      <option value="rose-linen-dark">Rose Linen Dark</option>
+      <option value="rust-brown">Rust Brown</option>
+      <option value="sage-sea">Sage Sea</option>
+      <option value="sage-sea-dark">Sage Sea Dark</option>
+      <option value="warm-sand">Warm Sand</option>
+      <option value="warm-sand-dark">Warm Sand Dark</option>
+    </select>
+  </div>  </div>
 
   <div class="card">
-    <table id="milkTable">
-      <thead>
-        <tr id="headerRow"></tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-    <div class="legend-bar">
-      <span class="legend-label">Lower</span>
-      <div class="legend-gradient"></div>
-      <span class="legend-label">Higher</span>
-    </div>
+  <table id="milkTable" class="grid-table">
+    <thead>
+      <tr><th class="col-name" onclick="setSortArrow(0)">Milk Type</th><th class="col-meta sort-asc" onclick="setSortArrow(1)">Category</th><th class="col-num" onclick="setSortArrow(2)">Energy (kcal)</th><th class="col-num" onclick="setSortArrow(3)">Protein (g)</th><th class="col-num" onclick="setSortArrow(4)">Fat (g)</th><th class="col-num" onclick="setSortArrow(5)">Carbs (g)</th><th class="col-num" onclick="setSortArrow(6)">Sugar (g)</th><th class="col-num" onclick="setSortArrow(7)">Calcium (mg)</th><th class="col-num" onclick="setSortArrow(8)">Vit D (µg)</th><th class="col-num" onclick="setSortArrow(9)">Vit B12 (µg)</th><th class="col-num" onclick="setSortArrow(10)">Potassium (mg)</th><th class="col-num" onclick="setSortArrow(11)">Nutrition Score</th></tr>
+    </thead>
+    <tbody><tr><td class="col-name" data-field="Name" data-val="Cow (Whole)">Cow (Whole)</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Animal">🐄 Animal</td><td class="col-num" data-field="Energy" data-val="61">61</td><td class="col-num" data-field="Protein" data-val="3.2">3.2</td><td class="col-num" data-field="Fat" data-val="3.3">3.3</td><td class="col-num" data-field="Carbs" data-val="4.8">4.8</td><td class="col-num" data-field="Sugar" data-val="5.1">5.1</td><td class="col-num" data-field="Calcium" data-val="113">113</td><td class="col-num" data-field="Vit D" data-val="1.3">1.3</td><td class="col-num" data-field="Vit B12" data-val="0.45">0.45</td><td class="col-num" data-field="Potassium" data-val="132">132</td><td class="col-num" data-field="Score" data-val="62.6">62.6</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Pea Milk">Pea Milk</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Plant">🫛 Plant</td><td class="col-num" data-field="Energy" data-val="35">35</td><td class="col-num" data-field="Protein" data-val="3.3">3.3</td><td class="col-num" data-field="Fat" data-val="1.6">1.6</td><td class="col-num" data-field="Carbs" data-val="0.5">0.5</td><td class="col-num" data-field="Sugar" data-val="0">0.0</td><td class="col-num" data-field="Calcium" data-val="120">120</td><td class="col-num" data-field="Vit D" data-val="1.1">1.1</td><td class="col-num" data-field="Vit B12" data-val="0.38">0.38</td><td class="col-num" data-field="Potassium" data-val="105">105</td><td class="col-num" data-field="Score" data-val="62.3">62.3</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Reindeer">Reindeer</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Animal">🦌 Animal</td><td class="col-num" data-field="Energy" data-val="186">186</td><td class="col-num" data-field="Protein" data-val="10.3">10.3</td><td class="col-num" data-field="Fat" data-val="14.5">14.5</td><td class="col-num" data-field="Carbs" data-val="2.5">2.5</td><td class="col-num" data-field="Sugar" data-val="2.5">2.5</td><td class="col-num" data-field="Calcium" data-val="320">320</td><td class="col-num" data-field="Vit D" data-val="0.5">0.5</td><td class="col-num" data-field="Vit B12" data-val="0.80">0.80</td><td class="col-num" data-field="Potassium" data-val="220">220</td><td class="col-num" data-field="Score" data-val="61.2">61.2</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Soy Milk">Soy Milk</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Plant">🌱 Plant</td><td class="col-num" data-field="Energy" data-val="33">33</td><td class="col-num" data-field="Protein" data-val="3.3">3.3</td><td class="col-num" data-field="Fat" data-val="1.8">1.8</td><td class="col-num" data-field="Carbs" data-val="1.2">1.2</td><td class="col-num" data-field="Sugar" data-val="0.4">0.4</td><td class="col-num" data-field="Calcium" data-val="120">120</td><td class="col-num" data-field="Vit D" data-val="1.1">1.1</td><td class="col-num" data-field="Vit B12" data-val="0.38">0.38</td><td class="col-num" data-field="Potassium" data-val="118">118</td><td class="col-num" data-field="Score" data-val="61.2">61.2</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Hemp Milk">Hemp Milk</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Plant">🌿 Plant</td><td class="col-num" data-field="Energy" data-val="35">35</td><td class="col-num" data-field="Protein" data-val="1.3">1.3</td><td class="col-num" data-field="Fat" data-val="2.5">2.5</td><td class="col-num" data-field="Carbs" data-val="1.5">1.5</td><td class="col-num" data-field="Sugar" data-val="0">0.0</td><td class="col-num" data-field="Calcium" data-val="120">120</td><td class="col-num" data-field="Vit D" data-val="1.1">1.1</td><td class="col-num" data-field="Vit B12" data-val="0.38">0.38</td><td class="col-num" data-field="Potassium" data-val="80">80</td><td class="col-num" data-field="Score" data-val="60.0">60.0</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Goat">Goat</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Animal">🐐 Animal</td><td class="col-num" data-field="Energy" data-val="69">69</td><td class="col-num" data-field="Protein" data-val="3.6">3.6</td><td class="col-num" data-field="Fat" data-val="4.1">4.1</td><td class="col-num" data-field="Carbs" data-val="4.5">4.5</td><td class="col-num" data-field="Sugar" data-val="4.5">4.5</td><td class="col-num" data-field="Calcium" data-val="134">134</td><td class="col-num" data-field="Vit D" data-val="0.7">0.7</td><td class="col-num" data-field="Vit B12" data-val="0.07">0.07</td><td class="col-num" data-field="Potassium" data-val="204">204</td><td class="col-num" data-field="Score" data-val="57.5">57.5</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Macadamia Milk">Macadamia Milk</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Plant">🌰 Plant</td><td class="col-num" data-field="Energy" data-val="21">21</td><td class="col-num" data-field="Protein" data-val="0.2">0.2</td><td class="col-num" data-field="Fat" data-val="1.8">1.8</td><td class="col-num" data-field="Carbs" data-val="0.8">0.8</td><td class="col-num" data-field="Sugar" data-val="0">0.0</td><td class="col-num" data-field="Calcium" data-val="120">120</td><td class="col-num" data-field="Vit D" data-val="1.1">1.1</td><td class="col-num" data-field="Vit B12" data-val="0.38">0.38</td><td class="col-num" data-field="Potassium" data-val="38">38</td><td class="col-num" data-field="Score" data-val="56.5">56.5</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Hazelnut Milk">Hazelnut Milk</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Plant">🌰 Plant</td><td class="col-num" data-field="Energy" data-val="29">29</td><td class="col-num" data-field="Protein" data-val="0.4">0.4</td><td class="col-num" data-field="Fat" data-val="1.6">1.6</td><td class="col-num" data-field="Carbs" data-val="3.0">3.0</td><td class="col-num" data-field="Sugar" data-val="1.0">1.0</td><td class="col-num" data-field="Calcium" data-val="118">118</td><td class="col-num" data-field="Vit D" data-val="1.0">1.0</td><td class="col-num" data-field="Vit B12" data-val="0.38">0.38</td><td class="col-num" data-field="Potassium" data-val="55">55</td><td class="col-num" data-field="Score" data-val="55.1">55.1</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Oat Milk">Oat Milk</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Plant">🌾 Plant</td><td class="col-num" data-field="Energy" data-val="43">43</td><td class="col-num" data-field="Protein" data-val="1.0">1.0</td><td class="col-num" data-field="Fat" data-val="1.5">1.5</td><td class="col-num" data-field="Carbs" data-val="6.5">6.5</td><td class="col-num" data-field="Sugar" data-val="3.2">3.2</td><td class="col-num" data-field="Calcium" data-val="120">120</td><td class="col-num" data-field="Vit D" data-val="1.1">1.1</td><td class="col-num" data-field="Vit B12" data-val="0.38">0.38</td><td class="col-num" data-field="Potassium" data-val="65">65</td><td class="col-num" data-field="Score" data-val="54.9">54.9</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Cashew Milk">Cashew Milk</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Plant">🥜 Plant</td><td class="col-num" data-field="Energy" data-val="18">18</td><td class="col-num" data-field="Protein" data-val="0.5">0.5</td><td class="col-num" data-field="Fat" data-val="1.2">1.2</td><td class="col-num" data-field="Carbs" data-val="1.0">1.0</td><td class="col-num" data-field="Sugar" data-val="0">0.0</td><td class="col-num" data-field="Calcium" data-val="120">120</td><td class="col-num" data-field="Vit D" data-val="1.1">1.1</td><td class="col-num" data-field="Vit B12" data-val="0.38">0.38</td><td class="col-num" data-field="Potassium" data-val="42">42</td><td class="col-num" data-field="Score" data-val="54.6">54.6</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Coconut Milk">Coconut Milk</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Plant">🥥 Plant</td><td class="col-num" data-field="Energy" data-val="19">19</td><td class="col-num" data-field="Protein" data-val="0.2">0.2</td><td class="col-num" data-field="Fat" data-val="1.6">1.6</td><td class="col-num" data-field="Carbs" data-val="1.0">1.0</td><td class="col-num" data-field="Sugar" data-val="0">0.0</td><td class="col-num" data-field="Calcium" data-val="120">120</td><td class="col-num" data-field="Vit D" data-val="1.0">1.0</td><td class="col-num" data-field="Vit B12" data-val="0.38">0.38</td><td class="col-num" data-field="Potassium" data-val="46">46</td><td class="col-num" data-field="Score" data-val="53.6">53.6</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Camel">Camel</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Animal">🐪 Animal</td><td class="col-num" data-field="Energy" data-val="46">46</td><td class="col-num" data-field="Protein" data-val="3.1">3.1</td><td class="col-num" data-field="Fat" data-val="2.0">2.0</td><td class="col-num" data-field="Carbs" data-val="4.4">4.4</td><td class="col-num" data-field="Sugar" data-val="4.4">4.4</td><td class="col-num" data-field="Calcium" data-val="114">114</td><td class="col-num" data-field="Vit D" data-val="0.5">0.5</td><td class="col-num" data-field="Vit B12" data-val="0.15">0.15</td><td class="col-num" data-field="Potassium" data-val="156">156</td><td class="col-num" data-field="Score" data-val="53.4">53.4</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Almond Milk">Almond Milk</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Plant">🌰 Plant</td><td class="col-num" data-field="Energy" data-val="15">15</td><td class="col-num" data-field="Protein" data-val="0.6">0.6</td><td class="col-num" data-field="Fat" data-val="1.1">1.1</td><td class="col-num" data-field="Carbs" data-val="0.3">0.3</td><td class="col-num" data-field="Sugar" data-val="0">0.0</td><td class="col-num" data-field="Calcium" data-val="120">120</td><td class="col-num" data-field="Vit D" data-val="1.1">1.1</td><td class="col-num" data-field="Vit B12" data-val="0.38">0.38</td><td class="col-num" data-field="Potassium" data-val="67">67</td><td class="col-num" data-field="Score" data-val="52.8">52.8</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Sheep">Sheep</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Animal">🐑 Animal</td><td class="col-num" data-field="Energy" data-val="108">108</td><td class="col-num" data-field="Protein" data-val="5.9">5.9</td><td class="col-num" data-field="Fat" data-val="7.0">7.0</td><td class="col-num" data-field="Carbs" data-val="5.4">5.4</td><td class="col-num" data-field="Sugar" data-val="5.4">5.4</td><td class="col-num" data-field="Calcium" data-val="193">193</td><td class="col-num" data-field="Vit D" data-val="0.2">0.2</td><td class="col-num" data-field="Vit B12" data-val="0.71">0.71</td><td class="col-num" data-field="Potassium" data-val="137">137</td><td class="col-num" data-field="Score" data-val="52.2">52.2</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Llama">Llama</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Animal">🦙 Animal</td><td class="col-num" data-field="Energy" data-val="60">60</td><td class="col-num" data-field="Protein" data-val="3.9">3.9</td><td class="col-num" data-field="Fat" data-val="3.2">3.2</td><td class="col-num" data-field="Carbs" data-val="5.6">5.6</td><td class="col-num" data-field="Sugar" data-val="5.6">5.6</td><td class="col-num" data-field="Calcium" data-val="130">130</td><td class="col-num" data-field="Vit D" data-val="0.3">0.3</td><td class="col-num" data-field="Vit B12" data-val="0.20">0.20</td><td class="col-num" data-field="Potassium" data-val="120">120</td><td class="col-num" data-field="Score" data-val="51.9">51.9</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Buffalo">Buffalo</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Animal">🐃 Animal</td><td class="col-num" data-field="Energy" data-val="97">97</td><td class="col-num" data-field="Protein" data-val="3.7">3.7</td><td class="col-num" data-field="Fat" data-val="6.9">6.9</td><td class="col-num" data-field="Carbs" data-val="5.2">5.2</td><td class="col-num" data-field="Sugar" data-val="5.2">5.2</td><td class="col-num" data-field="Calcium" data-val="169">169</td><td class="col-num" data-field="Vit D" data-val="0.5">0.5</td><td class="col-num" data-field="Vit B12" data-val="0.36">0.36</td><td class="col-num" data-field="Potassium" data-val="178">178</td><td class="col-num" data-field="Score" data-val="51.3">51.3</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Yak">Yak</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Animal">🦬 Animal</td><td class="col-num" data-field="Energy" data-val="130">130</td><td class="col-num" data-field="Protein" data-val="5.2">5.2</td><td class="col-num" data-field="Fat" data-val="7.5">7.5</td><td class="col-num" data-field="Carbs" data-val="5.0">5.0</td><td class="col-num" data-field="Sugar" data-val="5.0">5.0</td><td class="col-num" data-field="Calcium" data-val="210">210</td><td class="col-num" data-field="Vit D" data-val="0.3">0.3</td><td class="col-num" data-field="Vit B12" data-val="0.40">0.40</td><td class="col-num" data-field="Potassium" data-val="190">190</td><td class="col-num" data-field="Score" data-val="48.6">48.6</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Rice Milk">Rice Milk</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Plant">🍚 Plant</td><td class="col-num" data-field="Energy" data-val="47">47</td><td class="col-num" data-field="Protein" data-val="0.3">0.3</td><td class="col-num" data-field="Fat" data-val="1.0">1.0</td><td class="col-num" data-field="Carbs" data-val="9.2">9.2</td><td class="col-num" data-field="Sugar" data-val="5.3">5.3</td><td class="col-num" data-field="Calcium" data-val="118">118</td><td class="col-num" data-field="Vit D" data-val="1.0">1.0</td><td class="col-num" data-field="Vit B12" data-val="0.38">0.38</td><td class="col-num" data-field="Potassium" data-val="27">27</td><td class="col-num" data-field="Score" data-val="45.6">45.6</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Horse (Mare)">Horse (Mare)</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Animal">🐴 Animal</td><td class="col-num" data-field="Energy" data-val="48">48</td><td class="col-num" data-field="Protein" data-val="2.2">2.2</td><td class="col-num" data-field="Fat" data-val="1.2">1.2</td><td class="col-num" data-field="Carbs" data-val="6.4">6.4</td><td class="col-num" data-field="Sugar" data-val="6.4">6.4</td><td class="col-num" data-field="Calcium" data-val="89">89</td><td class="col-num" data-field="Vit D" data-val="0.3">0.3</td><td class="col-num" data-field="Vit B12" data-val="0.03">0.03</td><td class="col-num" data-field="Potassium" data-val="64">64</td><td class="col-num" data-field="Score" data-val="39.2">39.2</td></tr>
+<tr><td class="col-name" data-field="Name" data-val="Donkey">Donkey</td><td class="col-meta" data-field="Category" data-meta-kind="category" data-val="Animal">🫏 Animal</td><td class="col-num" data-field="Energy" data-val="44">44</td><td class="col-num" data-field="Protein" data-val="1.7">1.7</td><td class="col-num" data-field="Fat" data-val="1.0">1.0</td><td class="col-num" data-field="Carbs" data-val="6.9">6.9</td><td class="col-num" data-field="Sugar" data-val="6.9">6.9</td><td class="col-num" data-field="Calcium" data-val="68">68</td><td class="col-num" data-field="Vit D" data-val="0.2">0.2</td><td class="col-num" data-field="Vit B12" data-val="0.02">0.02</td><td class="col-num" data-field="Potassium" data-val="50">50</td><td class="col-num" data-field="Score" data-val="34.6">34.6</td></tr>
+</tbody>
+  </table>
+  <div class="legend-bar">
+    <span class="legend-label">Lower</span>
+    <div class="legend-gradient"></div>
+    <span class="legend-label">Higher</span>
+  </div>
   </div>
 
-  <div class="sources">
-    <h3>Data Sources & Methodology</h3>
+  <div class="card sources">
+    <h3>Price Context (2026)</h3>
     <ul>
-      <li><strong>USDA FoodData Central</strong> — cow, goat, sheep, buffalo milk.<br>
+      <li><strong>USDA AMS Retail Milk Prices (August 2026):</strong> U.S. simple average $4.05 per gallon for conventional whole milk, $4.01 for 2% reduced fat, and $5.18 per half gallon for organic whole milk. 2026 city averages range from ~$2.72 (Indianapolis) to ~$5.46 (Chicago).</li>
+      <li><strong>BLS CPI average price (July 2026):</strong> fresh whole, fortified milk at $4.31 per gallon in U.S. city average (FRED series APU0000709112).</li>
+      <li><strong>Plant-based milk pricing:</strong> the plant-milk price premium has collapsed from ~18% (2021) to an estimated ~2% in 2026 — functional price parity with dairy in many urban markets. Private-label plant milks retail 20–30% below national brands; wholesale ranges ~$0.90–1.60/L (soy), ~$1.20–2.20/L (oat), ~$1.30–2.40/L (almond).</li>
+      <li><strong>Market shares (2026):</strong> almond milk leads plant-based purchases (~58%), followed by oat (~21%, fastest-growing) and soy (~13%).</li>
+    </ul>
+    <h3>Data Sources &amp; Methodology</h3>
+    <ul>
+      <li><strong>USDA FoodData Central</strong> — cow, goat, sheep, buffalo milk. Cow (whole, 3.25% milkfat, vitamin D added, FDC ID 171265, refreshed 2026): 61 kcal, 3.2 g protein, 113 mg calcium, 1.3 µg vitamin D, 0.45 µg B12, 132 mg potassium per 100 g.<br>
         <a href="https://fdc.nal.usda.gov/" target="_blank">https://fdc.nal.usda.gov/</a></li>
-      <li><strong>FAO</strong> — Milk composition across species (Park & Haenlein, 2006; FAO Animal Production and Health Paper).<br>
+      <li><strong>FAO</strong> — Milk composition across species (Park &amp; Haenlein, 2006; FAO Animal Production and Health Paper).<br>
         <a href="https://www.fao.org/dairy-production-products/en/" target="_blank">fao.org</a></li>
       <li><strong>NIH / PubMed</strong> — Equine, camelid, and donkey milk composition studies.</li>
       <li><strong>Plant milks:</strong> USDA + manufacturer data (unsweetened, fortified variants). Actual values vary by brand.</li>
@@ -150,191 +210,89 @@
       <strong>Positive:</strong> Protein, Calcium, Vitamin D, Vitamin B12, Potassium → higher = better.<br>
       <strong>Moderate:</strong> Fat (optimal ~3–4 g), Calories (optimal ~50–65 kcal), Carbs (optimal ~4–5 g), Sugar (lower = better).<br>
       <strong>Bonus:</strong> Lactose-free scores a small bonus for digestibility (relevant for ~70% of world population).<br>
-      All values per 100 ml. Animal milks are whole unless noted. Plant milks are unsweetened fortified.
+      All values per 100 ml. Animal milks are whole unless noted. Plant milks are unsweetened fortified. Cells are palette-colored (red = low/weak, green = high/strong; reversed for Sugar and distance-based for Energy, Fat, Carbs around their optimum).
     </div>
   </div>
+  <div class="footer">
+  <p>Milk Comparison Report v2.0.0 &copy; 2026 Dan Micsa, PhD (dmicsa@gmail.com)</p>
+  <p>Generated on 2026-09-10</p>
 </div>
 
 <script>
-// ─── COLUMN DEFINITIONS ───────────────────────────────────────────────
-const columns = [
-  {key:"name",   label:"Milk Type",    unit:"",     fmt:s=>s,              higherBetter:null,  sortable:false},
-  {key:"type",   label:"Category",     unit:"",     fmt:s=>s,              higherBetter:null,  sortable:false},
-  {key:"kcal",   label:"Energy",       unit:"kcal", fmt:v=>Math.round(v),  higherBetter:null},  // moderate
-  {key:"protein",label:"Protein",      unit:"g",    fmt:v=>v.toFixed(1),   higherBetter:true},
-  {key:"fat",    label:"Fat",          unit:"g",    fmt:v=>v.toFixed(1),   higherBetter:null},  // moderate
-  {key:"carbs",  label:"Carbs",        unit:"g",    fmt:v=>v.toFixed(1),   higherBetter:null},  // moderate
-  {key:"sugar",  label:"Sugar",        unit:"g",    fmt:v=>v.toFixed(1),   higherBetter:false},
-  {key:"calcium",label:"Calcium",      unit:"mg",   fmt:v=>Math.round(v),  higherBetter:true},
-  {key:"vitd",   label:"Vit D",        unit:"µg",   fmt:v=>v.toFixed(1),   higherBetter:true},
-  {key:"vitb12", label:"Vit B12",      unit:"µg",   fmt:v=>v.toFixed(2),   higherBetter:true},
-  {key:"potassium",label:"Potassium",  unit:"mg",   fmt:v=>Math.round(v),  higherBetter:true},
-  {key:"score",  label:"Nutrition Score",unit:"",    fmt:v=>v.toFixed(0),   higherBetter:true},
-];
+function updateTableColors() {
+    const table = document.getElementById('milkTable');
+    if (!table) return;
 
-// ─── DATA (per 100 ml) ───────────────────────────────────────────────
-// Sources: USDA, FAO, PubMed reviews, manufacturer labels
-const data = [
-  // ── ANIMAL MILKS (whole) ──
-  //                            kcal  prot  fat   carbs sugar  Ca    VitD  B12    K     lactFree
-  {name:"Cow (Whole)",         type:"🐄 Animal", kcal:61,  protein:3.2, fat:3.3, carbs:4.8, sugar:5.1, calcium:120, vitd:1.3, vitb12:0.45, potassium:150, lactFree:false},
-  {name:"Goat",                type:"🐐 Animal", kcal:69,  protein:3.6, fat:4.1, carbs:4.5, sugar:4.5, calcium:134, vitd:0.7, vitb12:0.07, potassium:204, lactFree:false},
-  {name:"Sheep",               type:"🐑 Animal", kcal:108, protein:5.9, fat:7.0, carbs:5.4, sugar:5.4, calcium:193, vitd:0.2, vitb12:0.71, potassium:137, lactFree:false},
-  {name:"Buffalo",             type:"🐃 Animal", kcal:97,  protein:3.7, fat:6.9, carbs:5.2, sugar:5.2, calcium:169, vitd:0.5, vitb12:0.36, potassium:178, lactFree:false},
-  {name:"Yak",                 type:"🦬 Animal", kcal:130, protein:5.2, fat:7.5, carbs:5.0, sugar:5.0, calcium:210, vitd:0.3, vitb12:0.40, potassium:190, lactFree:false},
-  {name:"Camel",               type:"🐪 Animal", kcal:46,  protein:3.1, fat:2.0, carbs:4.4, sugar:4.4, calcium:114, vitd:0.5, vitb12:0.15, potassium:156, lactFree:false},
-  {name:"Horse (Mare)",        type:"🐴 Animal", kcal:48,  protein:2.2, fat:1.2, carbs:6.4, sugar:6.4, calcium:89,  vitd:0.3, vitb12:0.03, potassium:64,  lactFree:false},
-  {name:"Donkey",              type:"🫏 Animal", kcal:44,  protein:1.7, fat:1.0, carbs:6.9, sugar:6.9, calcium:68,  vitd:0.2, vitb12:0.02, potassium:50,  lactFree:false},
-  {name:"Llama",               type:"🦙 Animal", kcal:60,  protein:3.9, fat:3.2, carbs:5.6, sugar:5.6, calcium:130, vitd:0.3, vitb12:0.20, potassium:120, lactFree:false},
-  {name:"Reindeer",            type:"🦌 Animal", kcal:186, protein:10.3,fat:14.5,carbs:2.5, sugar:2.5, calcium:320, vitd:0.5, vitb12:0.80, potassium:220, lactFree:false},
+    const cells = table.querySelectorAll('tbody td[data-field][data-val]');
+    cells.forEach(cell => {
+        const field = cell.getAttribute('data-field');
+        const rawVal = parseFloat(cell.getAttribute('data-val'));
+        if (!field || Number.isNaN(rawVal)) return;
 
-  // ── PLANT MILKS (unsweetened, fortified) ──
-  {name:"Soy Milk",            type:"🌱 Plant",  kcal:33,  protein:3.3, fat:1.8, carbs:1.2, sugar:0.4, calcium:120, vitd:1.1, vitb12:0.38, potassium:118, lactFree:true},
-  {name:"Oat Milk",            type:"🌾 Plant",  kcal:43,  protein:1.0, fat:1.5, carbs:6.5, sugar:3.2, calcium:120, vitd:1.1, vitb12:0.38, potassium:65,  lactFree:true},
-  {name:"Almond Milk",         type:"🌰 Plant",  kcal:15,  protein:0.6, fat:1.1, carbs:0.3, sugar:0.0, calcium:120, vitd:1.1, vitb12:0.38, potassium:67,  lactFree:true},
-  {name:"Coconut Milk",        type:"🥥 Plant",  kcal:19,  protein:0.2, fat:1.6, carbs:1.0, sugar:0.0, calcium:120, vitd:1.0, vitb12:0.38, potassium:46,  lactFree:true},
-  {name:"Rice Milk",           type:"🍚 Plant",  kcal:47,  protein:0.3, fat:1.0, carbs:9.2, sugar:5.3, calcium:118, vitd:1.0, vitb12:0.38, potassium:27,  lactFree:true},
-  {name:"Hemp Milk",           type:"🌿 Plant",  kcal:35,  protein:1.3, fat:2.5, carbs:1.5, sugar:0.0, calcium:120, vitd:1.1, vitb12:0.38, potassium:80,  lactFree:true},
-  {name:"Cashew Milk",         type:"🥜 Plant",  kcal:18,  protein:0.5, fat:1.2, carbs:1.0, sugar:0.0, calcium:120, vitd:1.1, vitb12:0.38, potassium:42,  lactFree:true},
-  {name:"Pea Milk",            type:"🫛 Plant",  kcal:35,  protein:3.3, fat:1.6, carbs:0.5, sugar:0.0, calcium:120, vitd:1.1, vitb12:0.38, potassium:105, lactFree:true},
-  {name:"Hazelnut Milk",       type:"🌰 Plant",  kcal:29,  protein:0.4, fat:1.6, carbs:3.0, sugar:1.0, calcium:118, vitd:1.0, vitb12:0.38, potassium:55,  lactFree:true},
-  {name:"Macadamia Milk",      type:"🌰 Plant",  kcal:21,  protein:0.2, fat:1.8, carbs:0.8, sugar:0.0, calcium:120, vitd:1.1, vitb12:0.38, potassium:38,  lactFree:true},
-];
+        let min = 0.0;
+        let max = 100.0;
+        let reverse = false;
+        let colorValue = rawVal;
+        let usePalette = false;
 
-// ─── NUTRITION SCORE (0–100) ──────────────────────────────────────────
-function computeScore(d) {
-  const scores = [];
-  // 1. Protein (higher=better, 0→0, 10→100)
-  scores.push(Math.min(100, d.protein / 10 * 100));
-  // 2. Fat (moderate ~3–4g best)
-  scores.push(Math.max(0, 100 - Math.abs(d.fat - 3.5) * 15));
-  // 3. Calories (moderate ~50–65 best)
-  scores.push(Math.max(0, 100 - Math.abs(d.kcal - 55) * 1.2));
-  // 4. Carbs (moderate ~4–5g best)
-  scores.push(Math.max(0, 100 - Math.abs(d.carbs - 4.5) * 12));
-  // 5. Sugar (lower=better, 0→100, 7→0)
-  scores.push(Math.max(0, 100 - d.sugar / 7 * 100));
-  // 6. Calcium (higher=better, 0→0, 320→100)
-  scores.push(Math.min(100, d.calcium / 320 * 100));
-  // 7. Vitamin D (higher=better, 0→0, 1.5→100)
-  scores.push(Math.min(100, d.vitd / 1.5 * 100));
-  // 8. Vitamin B12 (higher=better, 0→0, 0.8→100)
-  scores.push(Math.min(100, d.vitb12 / 0.8 * 100));
-  // 9. Potassium (higher=better, 0→0, 250→100)
-  scores.push(Math.min(100, d.potassium / 250 * 100));
-  // 10. Lactose-free bonus (7 points — ~70% of adults are lactose intolerant)
-  scores.push(d.lactFree ? 70 : 50);
-
-  return scores.reduce((a, b) => a + b, 0) / scores.length;
-}
-
-data.forEach(d => { d.score = computeScore(d); });
-
-// ─── RG PALETTE (OKLCH) ──────────────────────────────────────────────
-function scoreToColor(val, min, max) {
-  if (max === min) return "var(--fg-dim)";
-  let t = (val - min) / (max - min);
-  t = Math.max(0, Math.min(1, t));
-  let L, C, hue;
-  if (t <= 0.5) {
-    const s = t * 2;
-    L   = 0.50 + s * (0.97 - 0.50);
-    C   = 0.20 + s * (0.02 - 0.20);
-    hue = 25   + s * (95   - 25);
-  } else {
-    const s = (t - 0.5) * 2;
-    L   = 0.97 + s * (0.50 - 0.97);
-    C   = 0.02 + s * (0.20 - 0.02);
-    hue = 95   + s * (143  - 95);
-  }
-  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
-}
-
-// ─── RENDER ──────────────────────────────────────────────────────────
-let sortCol = "score";
-let sortAsc = false;
-
-function getRange(key) {
-  const vals = data.map(d => d[key]).filter(v => typeof v === 'number' && isFinite(v));
-  return { min: Math.min(...vals), max: Math.max(...vals) };
-}
-
-function renderHeaders() {
-  const row = document.getElementById("headerRow");
-  row.innerHTML = "";
-  columns.forEach(col => {
-    const th = document.createElement("th");
-    const isSorted = sortCol === col.key;
-    th.className = isSorted ? "sorted" : "";
-    const arrow = (col.sortable === false) ? "" :
-      `<span class="arrow">${isSorted ? (sortAsc ? "▲" : "▼") : "⇅"}</span>`;
-    th.innerHTML = `${col.label}${col.unit ? " <small>("+col.unit+")</small>" : ""} ${arrow}`;
-    if (col.sortable !== false) {
-      th.onclick = () => {
-        if (sortCol === col.key) sortAsc = !sortAsc;
-        else { sortCol = col.key; sortAsc = col.higherBetter === false; }
-        renderTable();
-      };
-    }
-    row.appendChild(th);
-  });
-}
-
-function renderTable() {
-  renderHeaders();
-  const sorted = [...data].sort((a, b) => {
-    const va = a[sortCol], vb = b[sortCol];
-    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-    return sortAsc ? va - vb : vb - va;
-  });
-
-  const tbody = document.getElementById("tableBody");
-  tbody.innerHTML = "";
-
-  sorted.forEach(d => {
-    const tr = document.createElement("tr");
-    columns.forEach(col => {
-      const td = document.createElement("td");
-      const val = d[col.key];
-      if (col.key === "name") {
-        td.textContent = val;
-      } else if (col.key === "type") {
-        td.textContent = val;
-      } else {
-        td.textContent = col.fmt(val);
-        const range = getRange(col.key);
-        if (col.key === "score") {
-          td.className = "score-cell";
-          td.style.color = scoreToColor(val, range.min, range.max);
-        } else if (col.key === "kcal") {
-          // Moderate: ~55 optimal
-          const dist = Math.abs(val - 55);
-          const maxDist = Math.max(Math.abs(range.max - 55), Math.abs(range.min - 55));
-          td.style.color = scoreToColor(dist, maxDist, 0);
-        } else if (col.key === "fat") {
-          // Moderate: ~3.5 optimal
-          const dist = Math.abs(val - 3.5);
-          const maxDist = Math.max(Math.abs(range.max - 3.5), Math.abs(range.min - 3.5));
-          td.style.color = scoreToColor(dist, maxDist, 0);
-        } else if (col.key === "carbs") {
-          // Moderate: ~4.5 optimal
-          const dist = Math.abs(val - 4.5);
-          const maxDist = Math.max(Math.abs(range.max - 4.5), Math.abs(range.min - 4.5));
-          td.style.color = scoreToColor(dist, maxDist, 0);
-        } else if (col.higherBetter === true) {
-          td.style.color = scoreToColor(val, range.min, range.max);
-        } else if (col.higherBetter === false) {
-          td.style.color = scoreToColor(val, range.max, range.min);
+        if (field === 'Score') {
+            usePalette = true;
+            min = 0.0; max = 100.0;
+        } else if (field === 'Protein') {
+            usePalette = true;
+            min = 0.0; max = 10.0;
+        } else if (field === 'Calcium') {
+            usePalette = true;
+            min = 0.0; max = 320.0;
+        } else if (field === 'Vit D') {
+            usePalette = true;
+            min = 0.0; max = 1.5;
+        } else if (field === 'Vit B12') {
+            usePalette = true;
+            min = 0.0; max = 0.8;
+        } else if (field === 'Potassium') {
+            usePalette = true;
+            min = 0.0; max = 250.0;
+        } else if (field === 'Sugar') {
+            usePalette = true;
+            min = 0.0; max = 7.0;
+            reverse = true;
+        } else if (field === 'Energy' || field === 'Fat' || field === 'Carbs') {
+            const target = field === 'Energy' ? 55 : (field === 'Fat' ? 3.5 : 4.5);
+            let m = 0;
+            table.querySelectorAll('tbody td[data-field="' + field + '"]').forEach(c => {
+                const v = parseFloat(c.getAttribute('data-val'));
+                if (!Number.isNaN(v)) m = Math.max(m, Math.abs(v - target));
+            });
+            usePalette = true;
+            colorValue = Math.abs(rawVal - target);
+            min = 0.0; max = (m > 0 ? m : 1.0);
         }
-        td.style.fontWeight = "600";
-      }
-      tr.appendChild(td);
+
+        if (usePalette) {
+            const rgb = getPaletteColor(colorValue, min, max, reverse);
+            applyBackgroundWithContrast(cell, rgb);
+        }
     });
-    tbody.appendChild(tr);
-  });
 }
 
-renderTable();
+(function() {
+    const previousSetPalette = window.setPalette;
+    if (typeof previousSetPalette === 'function') {
+        window.setPalette = function(name) {
+            previousSetPalette(name);
+            updateTableColors();
+        };
+    }
+
+    const previousRenderTable = window.renderTable;
+    window.renderTable = function() {
+        if (typeof previousRenderTable === 'function') {
+            previousRenderTable();
+        }
+        updateTableColors();
+    };
+})();
 </script>
 </body>
 </html>

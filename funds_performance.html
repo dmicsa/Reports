@@ -1,150 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mutual Funds Performance</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 40px; background-color: #f8fafc; color: #1e293b; }
-        h1 { color: #0f172a; margin-bottom: 20px; }
-        .table-container { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; }
-        th { background-color: #f1f5f9; font-weight: 600; cursor: pointer; user-select: none; transition: background 0.2s; white-space: nowrap; }
-        th:hover { background-color: #e2e8f0; }
-        th::after { content: '\21D5'; margin-left: 8px; font-size: 0.8em; color: #94a3b8; }
-        th.asc::after { content: '\2191'; color: #3b82f6; }
-        th.desc::after { content: '\2193'; color: #3b82f6; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background-color: #f8fafc; }
-        .numeric { font-family: 'JetBrains Mono', Consolas, monospace; text-align: right; }
-        th.numeric { text-align: right; }
-        .good-val { color: #16a34a; font-weight: 500; }
-        .rating-5 { color: #16a34a; font-weight: 600; }
-        .rating-4 { color: #2563eb; font-weight: 600; }
-        .rating-3 { color: #ca8a04; font-weight: 600; }
-        .rating-2 { color: #ea580c; font-weight: 600; }
-        .rating-1 { color: #dc2626; font-weight: 600; }
-        .footer { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-        .pill { border: 1px solid #e2e8f0; background: rgba(241,245,249,0.8); border-radius: 999px;
-                padding: 7px 13px; font-size: 0.82em; color: #64748b; white-space: nowrap; }
-        .pill strong { color: #334155; }
-    </style>
-</head>
-<body>
+  <meta charset="UTF-8">
+	<meta name="darkreader-lock">
+  <title>Mutual Funds Performance</title>
+  <link rel="stylesheet" href="https://dmicsa.github.io/HTMLAssets/Theme.css">
+  <style>
+    body { background-color: var(--bg-color); color: var(--fg-color); margin: 20px; transition: background-color 0.3s, color 0.3s; }
+    /* Controls handled by report-header in Theme.css */
+    .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+      /* Numeric columns 50% wider (Theme.css pins .col-num at 80px) */
+    .grid-table td.col-num, .grid-table th.col-num {
+      width: 120px !important;
+      min-width: 120px !important;
+      max-width: 120px !important;
+    }</style>
+  <script src="https://dmicsa.github.io/HTMLAssets/Standard.js"></script>
+  <script>
+    // --- Local State ---
+    let usePercent = false;
+    let currentSortCol = -1;
+    let currentSortAsc = true;
 
+    // --- Helpers ---
+    function togglePercent() {
+      usePercent = !usePercent;
+      const btn = document.getElementById('percentToggle');
+      if(btn) btn.classList.toggle('active', usePercent);
+      try { localStorage.setItem('ms_percent', usePercent); } catch(e){}
+      updateNumberFormat();
+    }
+
+    function updateNumberFormat() {
+        const table = document.getElementById('summaryTable');
+        if(!table) return;
+
+		// Fields that can be toggled to %
+		const pctFields = ['10Y AR', 'SD'];
+		const srFields = ['10Y SR'];
+
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            Array.from(row.children).forEach(cell => {
+                const f = cell.getAttribute('data-field');
+				const val = parseFloat(cell.getAttribute('data-val'));
+				if (isNaN(val)) return;
+
+				if (pctFields.includes(f)) {
+					cell.textContent = usePercent
+						? (val * 100).toFixed(1) + '%'
+						: val.toFixed(2);
+				} else if (srFields.includes(f)) {
+					cell.textContent = val.toFixed(2);
+                }
+            });
+        });
+    }
+
+    function setSortArrow(colIndex) {
+      const table = document.getElementById('summaryTable');
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      const ths = Array.from(table.querySelectorAll('thead th'));
+      const trs = Array.from(tbody.querySelectorAll('tr'));
+
+      if (currentSortCol === colIndex) {
+          currentSortAsc = !currentSortAsc;
+      } else {
+          currentSortCol = colIndex;
+          currentSortAsc = true;
+		  if (colIndex > 4) currentSortAsc = false;
+      }
+
+      ths.forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+      const th = ths[colIndex];
+      if (th) th.classList.add(currentSortAsc ? 'sort-asc' : 'sort-desc');
+
+      const ascMult = currentSortAsc ? 1 : -1;
+
+      trs.sort((a, b) => {
+          let cellA = a.children[colIndex];
+          let cellB = b.children[colIndex];
+          if (!cellA || !cellB) return 0;
+
+          let valA = cellA.getAttribute('data-val');
+          if (!valA) valA = cellA.innerText.trim();
+          let valB = cellB.getAttribute('data-val');
+          if (!valB) valB = cellB.innerText.trim();
+
+          let fA = parseFloat(valA);
+          let fB = parseFloat(valB);
+
+          if (!isNaN(fA) && !isNaN(fB)) return (fA - fB) * ascMult;
+          return valA.localeCompare(valB) * ascMult;
+      });
+
+      trs.forEach(tr => tbody.appendChild(tr));
+      if (typeof updateTableColors === 'function') updateTableColors();
+    }
+
+
+
+    const renderTable = updateTableColors;
+
+    document.addEventListener('DOMContentLoaded', () => {
+       initStandard();
+       setSortArrow(0);
+       try {
+          // If stored percent preference is true, toggle it ON (which runs updateNumberFormat)
+          if(localStorage.getItem('ms_percent') === 'true') togglePercent();
+          // Otherwise, run updateNumberFormat explicitly to ensure default 2-decimal formatting
+          else updateNumberFormat();
+       } catch(e) {
+          updateNumberFormat();
+       }
+		 refreshMetaChips(document);
+       updateTableColors();
+    });
+  </script></head><body class="solarized-light">
+  <div class="report-header">
     <h1>10-Year Mutual Fund Performance</h1>
-    <div class="table-container">
-        <table id="fundsTable">
-            <thead>
-                <tr>
-                    <th onclick="sortTable(0, 'string')">Ticker</th>
-                    <th onclick="sortTable(1, 'string')">Fund Name</th>
-                    <th class="numeric" onclick="sortTable(2, 'percent')">10Y AR</th>
-                    <th class="numeric" onclick="sortTable(3, 'number')">10Y SR</th>
-                    <th class="numeric" onclick="sortTable(4, 'number')">Rating</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr><td>SSSYX</td><td>State Street Equity 500 Index K</td><td class="numeric good-val">15.46%</td><td class="numeric">0.85</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>FSPSX</td><td>Fidelity International Index</td><td class="numeric">9.02%</td><td class="numeric">0.55</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>SSFEX</td><td>State Street Aggregate Bond Index K</td><td class="numeric">2.54%</td><td class="numeric">0.49</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>FSMDX</td><td>FIDELITY MID CAP INDEX</td><td class="numeric">11.94%</td><td class="numeric">0.62</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>DFSTX</td><td>DFA US Small Cap I</td><td class="numeric">12.74%</td><td class="numeric">0.57</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>DFREX</td><td>DFA Real Estate Securities I</td><td class="numeric">5.93%</td><td class="numeric">0.29</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>AVUVX</td><td>Avantis U.S. Small Cap Value Instl</td><td class="numeric good-val">18.79%</td><td class="numeric">0.64</td><td class="numeric" title="★★★★★">5</td></tr>
-                <tr><td>BKGPX</td><td>BlackRock 60/40 Target Allocation K</td><td class="numeric">11.22%</td><td class="numeric">0.96</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>DSCGX</td><td>DFA US Small Cap Growth Instl</td><td class="numeric">12.22%</td><td class="numeric">0.55</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>FIMVX</td><td>Fidelity Mid Cap Value Index</td><td class="numeric">11.21%</td><td class="numeric">0.51</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>FIPDX</td><td>Fidelity Inflation-Protected Bond Index Fund</td><td class="numeric">3.33%</td><td class="numeric">0.61</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>FMDGX</td><td>FIDELITY MID CAP GROWTH INDEX</td><td class="numeric">10.60%</td><td class="numeric">0.43</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>GOIXX</td><td>Federated Hermes Govt Obl IS</td><td class="numeric">0.00%</td><td class="numeric">0.00</td><td class="numeric">-</td></tr>
-                <tr><td>HFARX</td><td>Janus Henderson Developed World Bond N</td><td class="numeric">2.42%</td><td class="numeric">0.51</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>MGRDX</td><td>MFS International Growth R6</td><td class="numeric">12.19%</td><td class="numeric">0.78</td><td class="numeric" title="★★★★★">5</td></tr>
-                <tr><td>MIGNX</td><td>MFS Massachusetts Inv Gr Stk R6</td><td class="numeric good-val">21.76%</td><td class="numeric good-val">1.11</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>PEQSX</td><td>Putnam Large Cap Value R6</td><td class="numeric good-val">18.25%</td><td class="numeric good-val">1.03</td><td class="numeric" title="★★★★★">5</td></tr>
-                <tr><td>PIMIX</td><td>PIMCO Income Fund</td><td class="numeric">4.83%</td><td class="numeric good-val">1.15</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>PTRQX</td><td>PGIM Total Return Bond R6</td><td class="numeric">3.15%</td><td class="numeric">0.59</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>RGNGX</td><td>American Funds Growth and Inc Port R6</td><td class="numeric">13.76%</td><td class="numeric good-val">1.02</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>RINGX</td><td>American Funds Cnsrv Gr & Inc R-6</td><td class="numeric">8.73%</td><td class="numeric good-val">1.03</td><td class="numeric" title="★★★★★">5</td></tr>
-                <tr><td>RNWGX</td><td>American Funds New World R6</td><td class="numeric">12.12%</td><td class="numeric">0.74</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>SSBSX</td><td>State Street Target Retirement 2025 K</td><td class="numeric">10.74%</td><td class="numeric">0.99</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>SSBYX</td><td>State Street Target Retirement 2030 K</td><td class="numeric">11.71%</td><td class="numeric">0.96</td><td class="numeric" title="★★★★★">5</td></tr>
-                <tr><td>SSCKX</td><td>State Street Target Retirement 2035 K</td><td class="numeric">12.17%</td><td class="numeric">0.93</td><td class="numeric" title="★★★★☆">4</td></tr>
-                <tr><td>SSCQX</td><td>State Street Target Retirement 2040 K</td><td class="numeric">12.75%</td><td class="numeric">0.91</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>SSDEX</td><td>State Street Target Retirement 2045 K</td><td class="numeric">12.97%</td><td class="numeric">0.88</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>SSDLX</td><td>State Street Target Retirement 2050 K</td><td class="numeric">13.19%</td><td class="numeric">0.87</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>SSDQX</td><td>State Street Target Retirement 2055 K</td><td class="numeric">12.82%</td><td class="numeric">0.84</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>SSDYX</td><td>State Street Target Retirement 2060 K</td><td class="numeric">12.46%</td><td class="numeric">0.84</td><td class="numeric" title="★★★☆☆">3</td></tr>
-                <tr><td>SSFKX</td><td>State Street Target Retirement 2065 K</td><td class="numeric">15.13%</td><td class="numeric good-val">1.03</td><td class="numeric" title="★★☆☆☆">2</td></tr>
-                <tr><td>SSFOX</td><td>State Street Target Retirement K</td><td class="numeric">7.27%</td><td class="numeric">0.97</td><td class="numeric" title="★★★★☆">4</td></tr>
-            </tbody>
-        </table>
+  <div class="controls-group">
+    <button id="percentToggle" class="btn btn-sm" onclick="togglePercent()" title="Toggle percentage display">%</button>
+    <div class="palette-dropdown">
+      <input type="checkbox" id="palette-toggle">
+      <label for="palette-toggle" class="palette-button" id="palette-btn-label">
+        <span id="current-palette-name">Loading...</span>
+      </label>
+      <div class="palette-menu" id="palette-menu"></div>
     </div>
+    <select id="themeSelect" onchange="setTheme(this.value)" title="Select Theme">
+      <option value="solarized-light" selected>Solarized Light</option>
+      <option value="dark">Dark</option>
+      <option value="kiwi-dark">Kiwi Dark</option>
+      <option value="kiwi-light">Kiwi Light</option>
+      <option value="light">Light</option>
+      <option value="mint-haze">Mint Haze</option>
+      <option value="mint-haze-dark">Mint Haze Dark</option>
+      <option value="oil">Oil</option>
+      <option value="petal-blush">Petal Blush</option>
+      <option value="petal-blush-dark">Petal Blush Dark</option>
+      <option value="rose-linen">Rose Linen</option>
+      <option value="rose-linen-dark">Rose Linen Dark</option>
+      <option value="rust-brown">Rust Brown</option>
+      <option value="sage-sea">Sage Sea</option>
+      <option value="sage-sea-dark">Sage Sea Dark</option>
+      <option value="warm-sand">Warm Sand</option>
+      <option value="warm-sand-dark">Warm Sand Dark</option>
+    </select>
+  </div>  </div>
 
-    <script>
-        let sortCol = -1;
-        let sortAsc = true;
+  <div class="card">
+  <table id="summaryTable" class="grid-table">
+    <thead>
+      <tr><th class="col-ix" onclick="setSortArrow(0)">Ix</th><th class="col-ticker sort-asc" onclick="setSortArrow(1)">Ticker</th><th class="col-name" onclick="setSortArrow(2)">Name</th><th class="col-num" onclick="setSortArrow(3)">10Y AR</th><th class="col-num" onclick="setSortArrow(4)">SD</th><th class="col-num" onclick="setSortArrow(5)">10Y SR</th><th class="col-num" onclick="setSortArrow(6)">Rating</th></tr>
+    </thead>
+    <tbody>
+<tr><td class="col-ix" data-field="Ix" data-val="1">1</td><td class="col-ticker" data-field="Ticker" data-val="SSSYX">SSSYX</td><td class="col-name" data-field="Name" data-val="State Street Equity 500 Index K">State Street Equity 500 Index K</td><td class="col-num" data-field="10Y AR" data-val="0.1554">0.1554</td><td class="col-num" data-field="SD" data-val="0.1539">0.1539</td><td class="col-num" data-field="10Y SR" data-val="0.8627">0.8627</td><td class='col-num' data-field="Rating" data-val="4" title='★★★★☆'>4</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="2">2</td><td class="col-ticker" data-field="Ticker" data-val="FSPSX">FSPSX</td><td class="col-name" data-field="Name" data-val="Fidelity International Index">Fidelity International Index</td><td class="col-num" data-field="10Y AR" data-val="0.0980">0.0980</td><td class="col-num" data-field="SD" data-val="0.1512">0.1512</td><td class="col-num" data-field="10Y SR" data-val="0.5357">0.5357</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="3">3</td><td class="col-ticker" data-field="Ticker" data-val="SSFEX">SSFEX</td><td class="col-name" data-field="Name" data-val="State Street Aggregate Bond Index K">State Street Aggregate Bond Index K</td><td class="col-num" data-field="10Y AR" data-val="0.0138">0.0138</td><td class="col-num" data-field="SD" data-val="0.0513">0.0513</td><td class="col-num" data-field="10Y SR" data-val="-0.1820">-0.1820</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="4">4</td><td class="col-ticker" data-field="Ticker" data-val="FSMDX">FSMDX</td><td class="col-name" data-field="Name" data-val="FIDELITY MID CAP INDEX">FIDELITY MID CAP INDEX</td><td class="col-num" data-field="10Y AR" data-val="0.1193">0.1193</td><td class="col-num" data-field="SD" data-val="0.1747">0.1747</td><td class="col-num" data-field="10Y SR" data-val="0.5962">0.5962</td><td class='col-num' data-field="Rating" data-val="4" title='★★★★☆'>4</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="5">5</td><td class="col-ticker" data-field="Ticker" data-val="DFSTX">DFSTX</td><td class="col-name" data-field="Name" data-val="DFA US Small Cap I">DFA US Small Cap I</td><td class="col-num" data-field="10Y AR" data-val="0.1104">0.1104</td><td class="col-num" data-field="SD" data-val="0.2007">0.2007</td><td class="col-num" data-field="10Y SR" data-val="0.5029">0.5029</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="6">6</td><td class="col-ticker" data-field="Ticker" data-val="DFREX">DFREX</td><td class="col-name" data-field="Name" data-val="DFA Real Estate Securities I">DFA Real Estate Securities I</td><td class="col-num" data-field="10Y AR" data-val="0.0627">0.0627</td><td class="col-num" data-field="SD" data-val="0.1720">0.1720</td><td class="col-num" data-field="10Y SR" data-val="0.2989">0.2989</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="7">7</td><td class="col-ticker" data-field="Ticker" data-val="AVUVX">AVUVX</td><td class="col-name" data-field="Name" data-val="Avantis U.S. Small Cap Value Instl">Avantis U.S. Small Cap Value Instl</td><td class="col-num" data-field="10Y AR" data-val="0.1736">0.1736</td><td class="col-num" data-field="SD" data-val="0.2557">0.2557</td><td class="col-num" data-field="10Y SR" data-val="0.6463">0.6463</td><td class='col-num' data-field="Rating" data-val="5" title='★★★★★'>5</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="8">8</td><td class="col-ticker" data-field="Ticker" data-val="BKGPX">BKGPX</td><td class="col-name" data-field="Name" data-val="BlackRock 60/40 Target Allocation K">BlackRock 60/40 Target Allocation K</td><td class="col-num" data-field="10Y AR" data-val="0.0940">0.0940</td><td class="col-num" data-field="SD" data-val="0.1027">0.1027</td><td class="col-num" data-field="10Y SR" data-val="0.6932">0.6932</td><td class='col-num' data-field="Rating" data-val="4" title='★★★★☆'>4</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="9">9</td><td class="col-ticker" data-field="Ticker" data-val="DSCGX">DSCGX</td><td class="col-name" data-field="Name" data-val="DFA US Small Cap Growth Instl">DFA US Small Cap Growth Instl</td><td class="col-num" data-field="10Y AR" data-val="0.1127">0.1127</td><td class="col-num" data-field="SD" data-val="0.1963">0.1963</td><td class="col-num" data-field="10Y SR" data-val="0.5206">0.5206</td><td class='col-num' data-field="Rating" data-val="4" title='★★★★☆'>4</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="10">10</td><td class="col-ticker" data-field="Ticker" data-val="FIMVX">FIMVX</td><td class="col-name" data-field="Name" data-val="Fidelity Mid Cap Value Index">Fidelity Mid Cap Value Index</td><td class="col-num" data-field="10Y AR" data-val="0.1179">0.1179</td><td class="col-num" data-field="SD" data-val="0.1939">0.1939</td><td class="col-num" data-field="10Y SR" data-val="0.5326">0.5326</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="11">11</td><td class="col-ticker" data-field="Ticker" data-val="FIPDX">FIPDX</td><td class="col-name" data-field="Name" data-val="Fidelity Inflation-Protected Bond Index Fund">Fidelity Inflation-Protected Bond Index Fund</td><td class="col-num" data-field="10Y AR" data-val="0.0241">0.0241</td><td class="col-num" data-field="SD" data-val="0.0492">0.0492</td><td class="col-num" data-field="10Y SR" data-val="0.0142">0.0142</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="12">12</td><td class="col-ticker" data-field="Ticker" data-val="FMDGX">FMDGX</td><td class="col-name" data-field="Name" data-val="FIDELITY MID CAP GROWTH INDEX">FIDELITY MID CAP GROWTH INDEX</td><td class="col-num" data-field="10Y AR" data-val="0.1037">0.1037</td><td class="col-num" data-field="SD" data-val="0.2051">0.2051</td><td class="col-num" data-field="10Y SR" data-val="0.4488">0.4488</td><td class='col-num' data-field="Rating" data-val="4" title='★★★★☆'>4</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="13">13</td><td class="col-ticker" data-field="Ticker" data-val="GOIXX">GOIXX</td><td class="col-name" data-field="Name" data-val="Federated Hermes Govt Obl IS">Federated Hermes Govt Obl IS</td><td class="col-num" data-field="10Y AR" data-val="0.0000">0.0000</td><td class="col-num" data-field="SD" data-val="0.0000">0.0000</td><td class="col-num" data-field="10Y SR" data-val=""></td><td class='col-num' data-field="Rating" data-val="">-</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="14">14</td><td class="col-ticker" data-field="Ticker" data-val="HFARX">HFARX</td><td class="col-name" data-field="Name" data-val="Janus Henderson Developed World Bond N">Janus Henderson Developed World Bond N</td><td class="col-num" data-field="10Y AR" data-val="0.0205">0.0205</td><td class="col-num" data-field="SD" data-val="0.0627">0.0627</td><td class="col-num" data-field="10Y SR" data-val="-0.0333">-0.0333</td><td class='col-num' data-field="Rating" data-val="2" title='★★☆☆☆'>2</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="15">15</td><td class="col-ticker" data-field="Ticker" data-val="MGRDX">MGRDX</td><td class="col-name" data-field="Name" data-val="MFS International Growth R6">MFS International Growth R6</td><td class="col-num" data-field="10Y AR" data-val="0.1025">0.1025</td><td class="col-num" data-field="SD" data-val="0.1431">0.1431</td><td class="col-num" data-field="10Y SR" data-val="0.5859">0.5859</td><td class='col-num' data-field="Rating" data-val="5" title='★★★★★'>5</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="16">16</td><td class="col-ticker" data-field="Ticker" data-val="MIGNX">MIGNX</td><td class="col-name" data-field="Name" data-val="MFS Massachusetts Inv Gr Stk R6">MFS Massachusetts Inv Gr Stk R6</td><td class="col-num" data-field="10Y AR" data-val="0.1416">0.1416</td><td class="col-num" data-field="SD" data-val="0.1525">0.1525</td><td class="col-num" data-field="10Y SR" data-val="0.7876">0.7876</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="17">17</td><td class="col-ticker" data-field="Ticker" data-val="PEQSX">PEQSX</td><td class="col-name" data-field="Name" data-val="Putnam Large Cap Value R6">Putnam Large Cap Value R6</td><td class="col-num" data-field="10Y AR" data-val="0.1463">0.1463</td><td class="col-num" data-field="SD" data-val="0.1485">0.1485</td><td class="col-num" data-field="10Y SR" data-val="0.8346">0.8346</td><td class='col-num' data-field="Rating" data-val="5" title='★★★★★'>5</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="18">18</td><td class="col-ticker" data-field="Ticker" data-val="PIMIX">PIMIX</td><td class="col-name" data-field="Name" data-val="PIMCO Income Fund">PIMCO Income Fund</td><td class="col-num" data-field="10Y AR" data-val="0.0441">0.0441</td><td class="col-num" data-field="SD" data-val="0.0512">0.0512</td><td class="col-num" data-field="10Y SR" data-val="0.3965">0.3965</td><td class='col-num' data-field="Rating" data-val="5" title='★★★★★'>5</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="19">19</td><td class="col-ticker" data-field="Ticker" data-val="PTRQX">PTRQX</td><td class="col-name" data-field="Name" data-val="PGIM Total Return Bond R6">PGIM Total Return Bond R6</td><td class="col-num" data-field="10Y AR" data-val="0.0226">0.0226</td><td class="col-num" data-field="SD" data-val="0.0591">0.0591</td><td class="col-num" data-field="10Y SR" data-val="-0.0043">-0.0043</td><td class='col-num' data-field="Rating" data-val="4" title='★★★★☆'>4</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="20">20</td><td class="col-ticker" data-field="Ticker" data-val="RGNGX">RGNGX</td><td class="col-name" data-field="Name" data-val="American Funds Growth and Inc Port R6">American Funds Growth and Inc Port R6</td><td class="col-num" data-field="10Y AR" data-val="0.1124">0.1124</td><td class="col-num" data-field="SD" data-val="0.1202">0.1202</td><td class="col-num" data-field="10Y SR" data-val="0.7483">0.7483</td><td class='col-num' data-field="Rating" data-val="4" title='★★★★☆'>4</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="21">21</td><td class="col-ticker" data-field="Ticker" data-val="RINGX">RINGX</td><td class="col-name" data-field="Name" data-val="American Funds Cnsrv Gr & Inc R-6">American Funds Cnsrv Gr & Inc R-6</td><td class="col-num" data-field="10Y AR" data-val="0.0762">0.0762</td><td class="col-num" data-field="SD" data-val="0.0823">0.0823</td><td class="col-num" data-field="10Y SR" data-val="0.6412">0.6412</td><td class='col-num' data-field="Rating" data-val="5" title='★★★★★'>5</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="22">22</td><td class="col-ticker" data-field="Ticker" data-val="RNWGX">RNWGX</td><td class="col-name" data-field="Name" data-val="American Funds New World R6">American Funds New World R6</td><td class="col-num" data-field="10Y AR" data-val="0.1109">0.1109</td><td class="col-num" data-field="SD" data-val="0.1527">0.1527</td><td class="col-num" data-field="10Y SR" data-val="0.6092">0.6092</td><td class='col-num' data-field="Rating" data-val="4" title='★★★★☆'>4</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="23">23</td><td class="col-ticker" data-field="Ticker" data-val="SSBSX">SSBSX</td><td class="col-name" data-field="Name" data-val="State Street Target Retirement 2025 K">State Street Target Retirement 2025 K</td><td class="col-num" data-field="10Y AR" data-val="0.0825">0.0825</td><td class="col-num" data-field="SD" data-val="0.0967">0.0967</td><td class="col-num" data-field="10Y SR" data-val="0.6191">0.6191</td><td class='col-num' data-field="Rating" data-val="4" title='★★★★☆'>4</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="24">24</td><td class="col-ticker" data-field="Ticker" data-val="SSBYX">SSBYX</td><td class="col-name" data-field="Name" data-val="State Street Target Retirement 2030 K">State Street Target Retirement 2030 K</td><td class="col-num" data-field="10Y AR" data-val="0.0928">0.0928</td><td class="col-num" data-field="SD" data-val="0.1103">0.1103</td><td class="col-num" data-field="10Y SR" data-val="0.6421">0.6421</td><td class='col-num' data-field="Rating" data-val="5" title='★★★★★'>5</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="25">25</td><td class="col-ticker" data-field="Ticker" data-val="SSCKX">SSCKX</td><td class="col-name" data-field="Name" data-val="State Street Target Retirement 2035 K">State Street Target Retirement 2035 K</td><td class="col-num" data-field="10Y AR" data-val="0.1002">0.1002</td><td class="col-num" data-field="SD" data-val="0.1206">0.1206</td><td class="col-num" data-field="10Y SR" data-val="0.6531">0.6531</td><td class='col-num' data-field="Rating" data-val="4" title='★★★★☆'>4</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="26">26</td><td class="col-ticker" data-field="Ticker" data-val="SSCQX">SSCQX</td><td class="col-name" data-field="Name" data-val="State Street Target Retirement 2040 K">State Street Target Retirement 2040 K</td><td class="col-num" data-field="10Y AR" data-val="0.1062">0.1062</td><td class="col-num" data-field="SD" data-val="0.1283">0.1283</td><td class="col-num" data-field="10Y SR" data-val="0.6646">0.6646</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="27">27</td><td class="col-ticker" data-field="Ticker" data-val="SSDEX">SSDEX</td><td class="col-name" data-field="Name" data-val="State Street Target Retirement 2045 K">State Street Target Retirement 2045 K</td><td class="col-num" data-field="10Y AR" data-val="0.1113">0.1113</td><td class="col-num" data-field="SD" data-val="0.1349">0.1349</td><td class="col-num" data-field="10Y SR" data-val="0.6726">0.6726</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="28">28</td><td class="col-ticker" data-field="Ticker" data-val="SSDLX">SSDLX</td><td class="col-name" data-field="Name" data-val="State Street Target Retirement 2050 K">State Street Target Retirement 2050 K</td><td class="col-num" data-field="10Y AR" data-val="0.1146">0.1146</td><td class="col-num" data-field="SD" data-val="0.1393">0.1393</td><td class="col-num" data-field="10Y SR" data-val="0.6775">0.6775</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="29">29</td><td class="col-ticker" data-field="Ticker" data-val="SSDQX">SSDQX</td><td class="col-name" data-field="Name" data-val="State Street Target Retirement 2055 K">State Street Target Retirement 2055 K</td><td class="col-num" data-field="10Y AR" data-val="0.1157">0.1157</td><td class="col-num" data-field="SD" data-val="0.1396">0.1396</td><td class="col-num" data-field="10Y SR" data-val="0.6831">0.6831</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="30">30</td><td class="col-ticker" data-field="Ticker" data-val="SSDYX">SSDYX</td><td class="col-name" data-field="Name" data-val="State Street Target Retirement 2060 K">State Street Target Retirement 2060 K</td><td class="col-num" data-field="10Y AR" data-val="0.1157">0.1157</td><td class="col-num" data-field="SD" data-val="0.1395">0.1395</td><td class="col-num" data-field="10Y SR" data-val="0.6836">0.6836</td><td class='col-num' data-field="Rating" data-val="3" title='★★★☆☆'>3</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="31">31</td><td class="col-ticker" data-field="Ticker" data-val="SSFKX">SSFKX</td><td class="col-name" data-field="Name" data-val="State Street Target Retirement 2065 K">State Street Target Retirement 2065 K</td><td class="col-num" data-field="10Y AR" data-val="0.1339">0.1339</td><td class="col-num" data-field="SD" data-val="0.1418">0.1418</td><td class="col-num" data-field="10Y SR" data-val="0.7530">0.7530</td><td class='col-num' data-field="Rating" data-val="2" title='★★☆☆☆'>2</td></tr>
+<tr><td class="col-ix" data-field="Ix" data-val="32">32</td><td class="col-ticker" data-field="Ticker" data-val="SSFOX">SSFOX</td><td class="col-name" data-field="Name" data-val="State Street Target Retirement K">State Street Target Retirement K</td><td class="col-num" data-field="10Y AR" data-val="0.0600">0.0600</td><td class="col-num" data-field="SD" data-val="0.0685">0.0685</td><td class="col-num" data-field="10Y SR" data-val="0.5330">0.5330</td><td class='col-num' data-field="Rating" data-val="5" title='★★★★★'>5</td></tr>
+</tbody>
+  </table>
+  </div>
+  <div class="footer">
+  <p>Funds Performance Report Generator v1.1.0 &copy; 2026 Dan Micsa, PhD (dmicsa@gmail.com)</p>
+  <p>Generated on 2026-09-10 at 11:46:36</p>
+</div>
 
-        function sortTable(colIdx, type) {
-            const table = document.getElementById("fundsTable");
-            const tbody = table.tBodies[0];
-            const rows = Array.from(tbody.rows);
-            const headers = table.querySelectorAll("th");
+<script>
+function updateTableColors() {
+    const table = document.getElementById('summaryTable');
+    if (!table) return;
 
-            if (sortCol === colIdx) {
-                sortAsc = !sortAsc;
-            } else {
-                sortCol = colIdx;
-                sortAsc = false;
-                if (type === 'string') sortAsc = true;
-            }
+    const cells = table.querySelectorAll('tbody td[data-field][data-val]');
+    cells.forEach(cell => {
+        const field = cell.getAttribute('data-field');
+        const rawVal = parseFloat(cell.getAttribute('data-val'));
+        if (!field || Number.isNaN(rawVal)) return;
 
-            headers.forEach(h => { h.classList.remove("asc", "desc"); });
-            if (sortAsc) headers[colIdx].classList.add("asc");
-            else headers[colIdx].classList.add("desc");
+        let min = 0.0;
+        let max = 1.0;
+        let reverse = false;
+        let colorValue = rawVal;
+        let usePalette = false;
 
-            rows.sort((a, b) => {
-                let valA = a.cells[colIdx].innerText.trim();
-                let valB = b.cells[colIdx].innerText.trim();
-
-                if (type === 'number') {
-                    valA = parseFloat(valA) || 0;
-                    valB = parseFloat(valB) || 0;
-                } else if (type === 'percent') {
-                    valA = parseFloat(valA.replace('%', '')) || 0;
-                    valB = parseFloat(valB.replace('%', '')) || 0;
-                }
-
-                if (valA < valB) return sortAsc ? -1 : 1;
-                if (valA > valB) return sortAsc ? 1 : -1;
-                return 0;
-            });
-
-            rows.forEach(row => tbody.appendChild(row));
+        if (field.includes('AR')) {
+            usePalette = true;
+            colorValue = Math.max(0.1, Math.min(0.3, rawVal));
+            min = 0.1;
+            max = 0.3;
+        } else if (field === 'MaxDD') {
+            usePalette = true;
+            colorValue = Math.max(0.1, Math.min(0.3, Math.abs(rawVal)));
+            min = 0.1;
+            max = 0.3;
+            reverse = true;
+        } else if (field === 'Win ratio') {
+            usePalette = true;
+            colorValue = rawVal;
+            min = 0.3;
+            max = 0.7;
+        } else if (field === 'SD') {
+            usePalette = true;
+            colorValue = Math.max(0.1, Math.min(0.3, rawVal));
+            min = 0.1;
+            max = 0.3;
+            reverse = true;
+        } else if (field === 'LS SR' || field === '10Y SR') {
+            usePalette = true;
+            colorValue = rawVal;
+            min = 1.0;
+            max = 2.0;
+        } else if (field === 'Quality') {
+            usePalette = true;
+            colorValue = Math.max(0.0, Math.min(1.0, rawVal));
+            min = 0.0;
+            max = 1.0;
+        } else if (field === 'Signals Used') {
+            usePalette = true;
+            colorValue = Math.max(6.0, Math.min(30.0, rawVal));
+            min = 6.0;
+            max = 30.0;
         }
 
-        sortTable(3, 'number');
-
-        function colorRatings() {
-            const tbody = document.getElementById("fundsTable").tBodies[0];
-            Array.from(tbody.rows).forEach(row => {
-                const ratingCell = row.cells[4];
-                if (ratingCell) {
-                    const rating = parseInt(ratingCell.innerText, 10);
-                    if (!isNaN(rating)) {
-                        ratingCell.classList.add('rating-' + rating);
-                    }
-                }
-            });
+        if (usePalette) {
+            const rgb = getPaletteColor(colorValue, min, max, reverse);
+            applyBackgroundWithContrast(cell, rgb);
         }
-        colorRatings();
-    </script>
-    <div class="footer">
-        <span class="pill"><strong>Prepared for</strong> Dan Micsa, PhD</span>
-        <span class="pill"><strong>Processed by</strong> Claude Sonnet</span>
-        <span class="pill"><strong>Generated</strong> April 2, 2026</span>
-        <span class="pill"><strong>Ratings</strong> Morningstar Overall via yfinance</span>
-    </div>
+    });
+}
+
+(function() {
+    const previousSetPalette = window.setPalette;
+    if (typeof previousSetPalette === 'function') {
+        window.setPalette = function(name) {
+            previousSetPalette(name);
+            updateTableColors();
+        };
+    }
+
+    const previousRenderTable = window.renderTable;
+    window.renderTable = function() {
+        if (typeof previousRenderTable === 'function') {
+            previousRenderTable();
+        }
+        updateTableColors();
+    };
+})();
+</script>
 </body>
 </html>

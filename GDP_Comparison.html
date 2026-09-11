@@ -1,98 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GDP Per Capita · USA vs Europe · Quintile Comparison</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:        #0f1117;
-    --surface:   #181b24;
-    --surface2:  #1f2330;
-    --border:    #2a2e3a;
-    --fg:        #e4e6ed;
-    --fg-dim:    #8b90a0;
-    --accent-us: #6c9fff;
-    --accent-eu: #ff8c6c;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--fg);
-    min-height: 100vh;
-    padding: 2rem;
-  }
-  .container { max-width: 1200px; margin: 0 auto; }
+  <meta charset="UTF-8">
+	<meta name="darkreader-lock">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GDP Per Capita · USA vs Europe · Quintile Comparison</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://dmicsa.github.io/HTMLAssets/Theme.css">
+  <style>
+    body { background-color: var(--bg-color); color: var(--fg-color); margin: 20px; transition: background-color 0.3s, color 0.3s; }
+    /* Controls handled by report-header in Theme.css */
+    .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    body { --accent-us: #6c9fff; --accent-eu: #ff8c6c; }
+    .legend-row { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 500; }
+    .legend-dot { width: 14px; height: 14px; border-radius: 4px; }
+    .legend-dot.us { background: var(--accent-us); }
+    .legend-dot.eu { background: var(--accent-eu); }
+    .chart-wrap { position: relative; width: 100%; }
+    .chart-wrap.quintile { height: 440px; }
+    .chart-wrap.strip { height: 360px; }
+    .sources h3 { margin-top: 0; }
+    .sources ul { padding-left: 1.2rem; }
+    .sources li { margin-bottom: .5rem; line-height: 1.5; }
+    .sources a { color: var(--fg-color); }
+    .sources .note { margin-top: .8rem; border-top: 1px solid var(--fg-color); padding-top: .8rem; line-height: 1.5; opacity: .85; }
+      /* Numeric columns 50% wider (Theme.css pins .col-num at 80px) */
+    .grid-table td.col-num, .grid-table th.col-num {
+      width: 120px !important;
+      min-width: 120px !important;
+      max-width: 120px !important;
+    }</style>
+  <script src="https://dmicsa.github.io/HTMLAssets/Standard.js"></script>
+  <script>
+    // --- Local State ---
+    let usePercent = false;
+    let currentSortCol = -1;
+    let currentSortAsc = true;
 
-  header { text-align: center; margin-bottom: 2.5rem; }
-  header h1 {
-    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
-    background: linear-gradient(135deg, var(--accent-us), var(--accent-eu));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text; margin-bottom: .4rem;
-  }
-  header p { color: var(--fg-dim); font-size: .9rem; font-weight: 400; }
+    // --- Helpers ---
+    function togglePercent() {
+      usePercent = !usePercent;
+      const btn = document.getElementById('percentToggle');
+      if(btn) btn.classList.toggle('active', usePercent);
+      try { localStorage.setItem('ms_percent', usePercent); } catch(e){}
+      updateNumberFormat();
+    }
 
-  .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 2rem; margin-bottom: 2rem;
-    position: relative; overflow: hidden;
-  }
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--accent-us), var(--accent-eu));
-  }
-  .card h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 1.2rem; color: var(--fg); }
+    function updateNumberFormat() {
+        const table = document.getElementById('dataTable');
+        if(!table) return;
 
-  .chart-wrap { position: relative; width: 100%; }
-  .chart-wrap.quintile { height: 440px; }
-  .chart-wrap.strip    { height: 360px; }
+		// Fields that can be toggled to %
+		const pctFields = ['Nom Growth'];
 
-  .legend-row {
-    display: flex; justify-content: center; gap: 2rem;
-    margin-bottom: 1.5rem; flex-wrap: wrap;
-  }
-  .legend-item { display: flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 500; }
-  .legend-dot  { width: 14px; height: 14px; border-radius: 4px; }
-  .legend-dot.us { background: var(--accent-us); }
-  .legend-dot.eu { background: var(--accent-eu); }
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            Array.from(row.children).forEach(cell => {
+                const f = cell.getAttribute('data-field');
+				const val = parseFloat(cell.getAttribute('data-val'));
+				if (isNaN(val)) return;
+
+				if (pctFields.includes(f)) {
+					cell.textContent = usePercent
+						? (val * 100).toFixed(1) + '%'
+						: val.toFixed(2);
+                }
+            });
+        });
+    }
+
+    function setSortArrow(colIndex) {
+      const table = document.getElementById('dataTable');
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      const ths = Array.from(table.querySelectorAll('thead th'));
+      const trs = Array.from(tbody.querySelectorAll('tr'));
+
+      if (currentSortCol === colIndex) {
+          currentSortAsc = !currentSortAsc;
+      } else {
+          currentSortCol = colIndex;
+          currentSortAsc = true;
+		  if (colIndex >= 2) currentSortAsc = false;
+      }
+
+      ths.forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+      const th = ths[colIndex];
+      if (th) th.classList.add(currentSortAsc ? 'sort-asc' : 'sort-desc');
+
+      const ascMult = currentSortAsc ? 1 : -1;
+
+      trs.sort((a, b) => {
+          let cellA = a.children[colIndex];
+          let cellB = b.children[colIndex];
+          if (!cellA || !cellB) return 0;
+
+          let valA = cellA.getAttribute('data-val');
+          if (!valA) valA = cellA.innerText.trim();
+          let valB = cellB.getAttribute('data-val');
+          if (!valB) valB = cellB.innerText.trim();
+
+          let fA = parseFloat(valA);
+          let fB = parseFloat(valB);
+
+          if (!isNaN(fA) && !isNaN(fB)) return (fA - fB) * ascMult;
+          return valA.localeCompare(valB) * ascMult;
+      });
+
+      trs.forEach(tr => tbody.appendChild(tr));
+      if (typeof updateTableColors === 'function') updateTableColors();
+    }
 
 
 
-  .sources {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.5rem; margin-top: 2rem;
-  }
-  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
-  .sources ul { list-style: none; padding: 0; }
-  .sources li {
-    font-size: .8rem; color: var(--fg-dim); margin-bottom: .5rem;
-    padding-left: 1rem; position: relative; line-height: 1.5;
-  }
-  .sources li::before { content: '→'; position: absolute; left: 0; color: var(--fg-dim); }
-  .sources a { color: var(--accent-us); text-decoration: none; }
-  .sources a:hover { text-decoration: underline; }
-  .sources .note {
-    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
-    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.5;
-  }
-</style>
-</head>
-<body>
-<div class="container">
+    const renderTable = updateTableColors;
 
-  <header>
+    document.addEventListener('DOMContentLoaded', () => {
+       initStandard();
+       setSortArrow(0);
+       try {
+          // If stored percent preference is true, toggle it ON (which runs updateNumberFormat)
+          if(localStorage.getItem('ms_percent') === 'true') togglePercent();
+          // Otherwise, run updateNumberFormat explicitly to ensure default 2-decimal formatting
+          else updateNumberFormat();
+       } catch(e) {
+          updateNumberFormat();
+       }
+		 refreshMetaChips(document);
+       updateTableColors();
+       buildCharts();
+    });
+  </script></head><body class="solarized-light">
+  <div class="report-header">
     <h1>GDP Per Capita · USA vs Europe</h1>
-    <p>Quintile comparison of US states and European countries, nominal USD</p>
-    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
-  </header>
+  <div class="controls-group">
+    <button id="percentToggle" class="btn btn-sm" onclick="togglePercent()" title="Toggle percentage display">%</button>
+    <div class="palette-dropdown">
+      <input type="checkbox" id="palette-toggle">
+      <label for="palette-toggle" class="palette-button" id="palette-btn-label">
+        <span id="current-palette-name">Loading...</span>
+      </label>
+      <div class="palette-menu" id="palette-menu"></div>
+    </div>
+    <select id="themeSelect" onchange="setTheme(this.value)" title="Select Theme">
+      <option value="solarized-light" selected>Solarized Light (default)</option>
+      <option value="dark">Dark</option>
+      <option value="kiwi-dark">Kiwi Dark</option>
+      <option value="kiwi-light">Kiwi Light</option>
+      <option value="light">Light</option>
+      <option value="mint-haze">Mint Haze</option>
+      <option value="mint-haze-dark">Mint Haze Dark</option>
+      <option value="oil">Oil</option>
+      <option value="petal-blush">Petal Blush</option>
+      <option value="petal-blush-dark">Petal Blush Dark</option>
+      <option value="rose-linen">Rose Linen</option>
+      <option value="rose-linen-dark">Rose Linen Dark</option>
+      <option value="rust-brown">Rust Brown</option>
+      <option value="sage-sea">Sage Sea</option>
+      <option value="sage-sea-dark">Sage Sea Dark</option>
+      <option value="warm-sand">Warm Sand</option>
+      <option value="warm-sand-dark">Warm Sand Dark</option>
+    </select>
+  </div>  </div>
 
   <div class="legend-row">
-    <div class="legend-item"><div class="legend-dot us"></div> US States (2024)</div>
-    <div class="legend-item"><div class="legend-dot eu"></div> European Countries (2025 IMF)</div>
+    <div class="legend-item"><div class="legend-dot us"></div> US States (2025, BEA)</div>
+    <div class="legend-item"><div class="legend-dot eu"></div> European Countries (2025, World Bank)</div>
   </div>
 
   <!-- Quintile bar chart -->
@@ -107,119 +181,186 @@
     <div class="chart-wrap strip"><canvas id="stripChart"></canvas></div>
   </div>
 
+  <!-- Data table -->
+  <div class="card">
+  <table id="dataTable" class="grid-table">
+    <thead>
+      <tr><th class="col-meta" onclick="setSortArrow(0)">Region</th><th class="col-name" onclick="setSortArrow(1)">Entity</th><th class="col-num" onclick="setSortArrow(2)">GDP pc 2024 ($)</th><th class="col-num" onclick="setSortArrow(3)">GDP pc 2025 ($)</th><th class="col-num" onclick="setSortArrow(4)">Nom Growth</th><th class="col-num" onclick="setSortArrow(5)">GDP pc PPP 2025 (int$)</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  </div>
 
   <!-- Sources -->
-  <div class="sources">
+  <div class="card sources">
     <h3>Data Sources</h3>
     <ul>
-      <li><strong>US States GDP per capita (2024)</strong> — U.S. Bureau of Economic Analysis (BEA), GDP by State.<br>
+      <li><strong>US states GDP per capita (2025)</strong> — U.S. Bureau of Economic Analysis (BEA), GDP by State (SAGDP1/SAGDP9N), preliminary annual 2025 estimates released April 9, 2026; population: U.S. Census Bureau, State Population Totals 2020–2025 (released January 13, 2026).<br>
         <a href="https://www.bea.gov/data/gdp/gdp-state" target="_blank">https://www.bea.gov/data/gdp/gdp-state</a></li>
-      <li><strong>European countries GDP per capita (2025)</strong> — IMF World Economic Outlook Database, October 2025.<br>
-        <a href="https://www.imf.org/en/Publications/WEO/weo-database/2025/October" target="_blank">https://www.imf.org/en/Publications/WEO/weo-database/2025/October</a></li>
-      <li><strong>US state population</strong> — U.S. Census Bureau, Annual Population Estimates.<br>
-        <a href="https://www.census.gov/data/tables/time-series/demo/popest/2020s-state-total.html" target="_blank">https://www.census.gov/data/tables/time-series/demo/popest/2020s-state-total.html</a></li>
+      <li><strong>European countries GDP per capita (2025, nominal & PPP)</strong> — World Bank, World Development Indicators (WDI), 2026 update; 2025 actuals. Nominal: NY.GDP.PCAP.CD; PPP: NY.GDP.PCAP.PP.CD (current international dollars).<br>
+        <a href="https://data.worldbank.org/indicator/NY.GDP.PCAP.CD" target="_blank">https://data.worldbank.org/indicator/NY.GDP.PCAP.CD</a></li>
     </ul>
     <div class="note">
-      GDP per capita = nominal GDP / population, in current US dollars. DC excluded from US states.
-      Luxembourg & Ireland excluded from European quintile calculation as extreme outliers ($135k–$154k) but shown in distribution.
-      European set includes EU-27 + UK, Norway, Switzerland, Iceland.
+      GDP per capita = nominal GDP / population, in current US dollars. DC excluded from US states (2025: $277,689 — far above any state).
+      Luxembourg & Ireland excluded from the European quintile calculation as extreme outliers ($131.6k–$147.3k) but shown in the distribution and table.
+      European set includes EU-27 + UK, Norway, Switzerland, Iceland. PPP per capita is available for countries only (US is the PPP base, so US nominal = PPP).
+      Nominal growth is the 2024→2025 change in current-dollar GDP per capita.
     </div>
   </div>
 
+  <div class="footer">
+  <p>GDP Per Capita Comparison Report v1.0.0 &copy; 2026 Dan Micsa, PhD (dmicsa@gmail.com)</p>
+  <p>Data vintage: BEA GDP by State (2026-04-09 release, 2025 annual) · World Bank WDI 2025 actuals (2026 update)</p>
+  <p>Generated on 2026-09-10</p>
 </div>
 
 <script>
 // ─── DATA ──────────────────────────────────────────────────────────────
+// US states: BEA GDP by State, preliminary annual 2025 (released 2026-04-09), Census 2025 population. g = nominal GDP per capita change 2024→2025.
+// v = nominal GDP per capita 2025 (USD).
 const usStates = [
-  {name:"New York",          v:111000},
-  {name:"Massachusetts",     v:105000},
-  {name:"Washington",        v:103000},
-  {name:"California",        v: 99000},
-  {name:"North Dakota",      v: 97000},
-  {name:"Connecticut",       v: 96000},
-  {name:"Delaware",          v: 95000},
-  {name:"Alaska",            v: 93000},
-  {name:"Nebraska",          v: 92000},
-  {name:"Colorado",          v: 90000},
-  {name:"Wyoming",           v: 88000},
-  {name:"Illinois",          v: 87000},
-  {name:"New Jersey",        v: 86000},
-  {name:"Minnesota",         v: 82000},
-  {name:"Texas",             v: 81000},
-  {name:"Oregon",            v: 79000},
-  {name:"Iowa",              v: 78000},
-  {name:"South Dakota",      v: 77000},
-  {name:"Maryland",          v: 76000},
-  {name:"Virginia",          v: 75000},
-  {name:"Pennsylvania",      v: 74000},
-  {name:"New Hampshire",     v: 73000},
-  {name:"Hawaii",            v: 73000},
-  {name:"Indiana",           v: 72000},
-  {name:"Wisconsin",         v: 71000},
-  {name:"Ohio",              v: 70000},
-  {name:"Kansas",            v: 69000},
-  {name:"Rhode Island",      v: 68000},
-  {name:"Georgia",           v: 68000},
-  {name:"Tennessee",         v: 68000},
-  {name:"Utah",              v: 67000},
-  {name:"Florida",           v: 67000},
-  {name:"North Carolina",    v: 66000},
-  {name:"Michigan",          v: 65000},
-  {name:"Missouri",          v: 64000},
-  {name:"Montana",           v: 63000},
-  {name:"Maine",             v: 63000},
-  {name:"Nevada",            v: 62000},
-  {name:"Arizona",           v: 62000},
-  {name:"Vermont",           v: 62000},
-  {name:"Louisiana",         v: 62000},
-  {name:"Oklahoma",          v: 61000},
-  {name:"West Virginia",     v: 61000},
-  {name:"New Mexico",        v: 60000},
-  {name:"Arkansas",          v: 60000},
-  {name:"Idaho",             v: 58000},
-  {name:"South Carolina",    v: 57000},
-  {name:"Kentucky",          v: 56000},
-  {name:"Alabama",           v: 55000},
-  {name:"Mississippi",       v: 53000},
+  {name:"New York",          v:123369, g:0.063},
+  {name:"Massachusetts",     v:114635, g:0.053},
+  {name:"Washington",        v:111860, g:0.046},
+  {name:"Delaware",          v:110588, g:0.056},
+  {name:"California",        v:108012, g:0.050},
+  {name:"North Dakota",      v:102436, g:0.023},
+  {name:"Connecticut",       v:102062, g:0.055},
+  {name:"Alaska",            v:101742, g:0.048},
+  {name:"Nebraska",          v: 98153, g:0.047},
+  {name:"Colorado",          v: 97184, g:0.048},
+  {name:"Illinois",          v: 94503, g:0.047},
+  {name:"New Jersey",        v: 92915, g:0.049},
+  {name:"Minnesota",         v: 91154, g:0.047},
+  {name:"Texas",             v: 91594, g:0.049},
+  {name:"Maryland",          v: 90680, g:0.041},
+  {name:"Wyoming",           v: 89379, g:0.022},
+  {name:"New Hampshire",     v: 88688, g:0.052},
+  {name:"Virginia",          v: 89914, g:0.048},
+  {name:"South Dakota",      v: 86248, g:0.050},
+  {name:"Hawaii",            v: 86967, g:0.059},
+  {name:"Iowa",              v: 85570, g:0.043},
+  {name:"Nevada",            v: 85752, g:0.046},
+  {name:"Georgia",           v: 81823, g:0.049},
+  {name:"Ohio",              v: 81239, g:0.047},
+  {name:"Kansas",            v: 81075, g:0.047},
+  {name:"Utah",              v: 89286, g:0.055},
+  {name:"Pennsylvania",      v: 80895, g:0.048},
+  {name:"Oregon",            v: 80225, g:0.038},
+  {name:"Tennessee",         v: 80630, g:0.051},
+  {name:"Florida",           v: 78195, g:0.063},
+  {name:"Arizona",           v: 78463, g:0.049},
+  {name:"North Carolina",    v: 79815, g:0.059},
+  {name:"Wisconsin",         v: 79199, g:0.044},
+  {name:"Indiana",           v: 78188, g:0.050},
+  {name:"Missouri",          v: 74710, g:0.044},
+  {name:"Maine",             v: 72688, g:0.037},
+  {name:"Michigan",          v: 72085, g:0.039},
+  {name:"Montana",           v: 71947, g:0.050},
+  {name:"New Mexico",        v: 71879, g:0.039},
+  {name:"Louisiana",         v: 73639, g:0.033},
+  {name:"Vermont",           v: 75001, g:0.045},
+  {name:"Rhode Island",      v: 75329, g:0.045},
+  {name:"Idaho",             v: 66784, g:0.051},
+  {name:"South Carolina",    v: 68009, g:0.061},
+  {name:"Kentucky",          v: 66617, g:0.039},
+  {name:"Oklahoma",          v: 66554, g:0.041},
+  {name:"Alabama",           v: 65694, g:0.049},
+  {name:"Arkansas",          v: 63703, g:0.054},
+  {name:"West Virginia",     v: 61873, g:0.026},
+  {name:"Mississippi",       v: 55877, g:0.044},
 ].sort((a,b) => a.v - b.v);
 
+// European countries: World Bank WDI 2025 actuals (2026 update). ppp = GDP per capita, PPP (current international $, 2025).
 const euCountries = [
-  {name:"Luxembourg",    v:154120},
-  {name:"Ireland",        v:135250},
-  {name:"Switzerland",    v: 99990},
-  {name:"Norway",         v: 94600},
-  {name:"Iceland",        v: 84340},
-  {name:"Denmark",        v: 82710},
-  {name:"Netherlands",    v: 77880},
-  {name:"Sweden",         v: 66120},
-  {name:"Austria",        v: 65640},
-  {name:"Belgium",        v: 63900},
-  {name:"Germany",        v: 63600},
-  {name:"United Kingdom", v: 60010},
-  {name:"Finland",        v: 59750},
-  {name:"France",         v: 52000},
-  {name:"Malta",          v: 53080},
-  {name:"Italy",          v: 45880},
-  {name:"Cyprus",         v: 45600},
-  {name:"Spain",          v: 40580},
-  {name:"Slovenia",       v: 40160},
-  {name:"Czech Republic", v: 38370},
-  {name:"Estonia",        v: 37190},
-  {name:"Lithuania",      v: 36230},
-  {name:"Portugal",       v: 33970},
-  {name:"Slovak Republic",v: 31030},
-  {name:"Poland",         v: 30650},
-  {name:"Greece",         v: 29410},
-  {name:"Croatia",        v: 29370},
-  {name:"Hungary",        v: 28300},
-  {name:"Latvia",         v: 28020},
-  {name:"Romania",        v: 23770},
+  {name:"Luxembourg",     v:147252, g:0.0687, ppp:156542},
+  {name:"Ireland",        v:131592, g:0.1656, ppp:155089},
+  {name:"Switzerland",    v:114769, g:0.0656, ppp:102513},
+  {name:"Iceland",        v: 98323, g:0.1451, ppp: 83431},
+  {name:"Norway",         v: 94594, g:0.0523, ppp:104044},
+  {name:"Denmark",        v: 76970, g:0.0837, ppp: 83218},
+  {name:"Netherlands",    v: 73684, g:0.0922, ppp: 87320},
+  {name:"Sweden",         v: 63133, g:0.1033, ppp: 72529},
+  {name:"Austria",        v: 62930, g:0.0800, ppp: 76778},
+  {name:"Belgium",        v: 60750, g:0.0737, ppp: 74676},
+  {name:"Germany",        v: 60496, g:0.0783, ppp: 75407},
+  {name:"United Kingdom", v: 57602, g:0.0799, ppp: 64606},
+  {name:"Finland",        v: 56149, g:0.0563, ppp: 65884},
+  {name:"France",         v: 48986, g:0.0625, ppp: 63975},
+  {name:"Malta",          v: 47907, g:0.0882, ppp: 72210},
+  {name:"Italy",          v: 43309, g:0.0712, ppp: 62803},
+  {name:"Cyprus",         v: 41783, g:0.0804, ppp: 64575},
+  {name:"Spain",          v: 38627, g:0.0934, ppp: 59868},
+  {name:"Slovenia",       v: 37376, g:0.0897, ppp: 59245},
+  {name:"Czech Republic", v: 35917, g:0.1285, ppp: 60487},
+  {name:"Estonia",        v: 34418, g:0.0951, ppp: 52106},
+  {name:"Lithuania",      v: 32959, g:0.1133, ppp: 56838},
+  {name:"Portugal",       v: 32082, g:0.0939, ppp: 53146},
+  {name:"Slovak Republic",v: 28544, g:0.0981, ppp: 49309},
+  {name:"Poland",         v: 28420, g:0.1320, ppp: 54262},
+  {name:"Croatia",        v: 27104, g:0.1270, ppp: 50946},
+  {name:"Greece",         v: 26948, g:0.0943, ppp: 45264},
+  {name:"Latvia",         v: 26312, g:0.1159, ppp: 46137},
+  {name:"Hungary",        v: 25907, g:0.1116, ppp: 49838},
+  {name:"Romania",        v: 22538, g:0.1224, ppp: 50895},
 ].sort((a,b) => a.v - b.v);
 
 // Exclude Luxembourg & Ireland from quintile calc (extreme outliers)
 const euForQuintiles = euCountries.filter(c => c.name !== "Luxembourg" && c.name !== "Ireland");
 
-// ─── QUINTILE HELPER ───────────────────────────────────────────────────
+// ─── DATA TABLE (generated synchronously so sorting/palette work at load) ──
+(function buildTable() {
+  const tbody = document.querySelector('#dataTable tbody');
+  if (!tbody) return;
+  const fmt$ = n => '$' + Math.round(n).toLocaleString('en-US');
+  let ix = 0;
+  const addRow = (region, name, pc24, pc25, g, ppp) => {
+    ix++;
+    const tr = document.createElement('tr');
+    const cells = [
+      {cls:'col-meta',  field:'Region',       val:region, txt:region},
+      {cls:'col-name',  field:'Entity',       val:name,   txt:name},
+      {cls:'col-num',   field:'GDP pc 2024',  val:pc24,   txt:pc24 == null ? '—' : fmt$(pc24)},
+      {cls:'col-num',   field:'GDP pc 2025',  val:pc25,   txt:fmt$(pc25)},
+      {cls:'col-num',   field:'Nom Growth',   val:g,      txt:(g*100).toFixed(1)+'%'},
+      {cls:'col-num',   field:'GDP pc PPP 2025', val:ppp, txt:ppp == null ? '—' : Math.round(ppp).toLocaleString('en-US')},
+    ];
+    cells.forEach(c => {
+      const td = document.createElement('td');
+      td.className = c.cls;
+      td.setAttribute('data-field', c.field);
+      if (c.val != null) td.setAttribute('data-val', c.val);
+      td.textContent = c.txt;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  };
+  // US state 2024 per capita derived from BEA current-dollar GDP 2024 and Census 2024/2025 populations
+  const us2024 = {
+    "New York":117332,"Massachusetts":110561,"Washington":108468,"Delaware":98055,"California":104916,
+    "North Dakota":95982,"Connecticut":100235,"Alaska":95147,"Nebraska":93145,"Colorado":93026,
+    "Illinois":90449,"New Jersey":90272,"Minnesota":86371,"Texas":86987,"Maryland":87021,
+    "Wyoming":90335,"New Hampshire":85518,"Virginia":86747,"South Dakota":80685,"Hawaii":80325,
+    "Iowa":79631,"Nevada":80880,"Georgia":78754,"Ohio":78120,"Kansas":79513,
+    "Utah":86506,"Pennsylvania":78544,"Oregon":77916,"Tennessee":75748,"Florida":73784,
+    "Arizona":73203,"North Carolina":75876,"Wisconsin":75605,"Indiana":76004,"Missouri":72108,
+    "Maine":69803,"Michigan":71083,"Montana":66379,"New Mexico":66229,"Louisiana":71642,
+    "Vermont":70131,"Rhode Island":74594,"Idaho":63991,"South Carolina":63711,"Kentucky":64110,
+    "Oklahoma":64719,"Alabama":61846,"Arkansas":60276,"West Virginia":60783,"Mississippi":53061
+  };
+  usStates.forEach(s => addRow('US', s.name, us2024[s.name] ?? null, s.v, s.g, null));
+  const eu2024 = {
+    "Luxembourg":137782,"Ireland":112895,"Switzerland":107702,"Iceland":85863,"Norway":89889,
+    "Denmark":71026,"Netherlands":67465,"Sweden":57223,"Austria":58269,"Belgium":56582,
+    "Germany":56104,"United Kingdom":53341,"Finland":53156,"France":46103,"Malta":44024,
+    "Italy":40430,"Cyprus":38674,"Spain":35327,"Slovenia":34301,"Czech Republic":31828,
+    "Estonia":31428,"Lithuania":29604,"Portugal":29328,"Slovak Republic":25993,"Poland":25104,
+    "Croatia":24050,"Greece":24626,"Latvia":23579,"Hungary":23305,"Romania":20080
+  };
+  euCountries.forEach(c => addRow('Europe', c.name, eu2024[c.name] ?? null, c.v, c.g, c.ppp));
+})();
+
+// ─── QUINTILE HELPERS ─────────────────────────────────────────────────
 function quantile(arr, q) {
   const sorted = [...arr].sort((a,b) => a - b);
   if (q === 0) return sorted[0];
@@ -254,163 +395,247 @@ function entityAtQuantile(data, q) {
 const usQ  = computeQuintiles(usStates);
 const euQ  = computeQuintiles(euForQuintiles);
 
-// ─── CHART DEFAULTS ────────────────────────────────────────────────────
-Chart.defaults.color = '#8b90a0';
-Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
-Chart.defaults.font.size = 12;
+// ─── THEME-AWARE CHART COLORS ─────────────────────────────────────────
+function themeChartColors() {
+  const cs = getComputedStyle(document.body);
+  const pick = (v, fallback) => {
+    const m = (v || '').match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : fallback;
+  };
+  const fg = pick(cs.getPropertyValue('--fg-color'), [128,128,128]);
+  const bg = pick(cs.getPropertyValue('--bg-color'), [255,255,255]);
+  return {
+    fg: `rgb(${fg.join(',')})`,
+    bg: `rgb(${bg.join(',')})`,
+    grid: `rgba(${fg.join(',')},0.10)`,
+    gridLight: `rgba(${fg.join(',')},0.06)`,
+    border: `rgba(${fg.join(',')},0.25)`,
+  };
+}
 
-const usColor   = 'rgba(108,159,255,0.85)';
-const euColor   = 'rgba(255,140,108,0.85)';
-const usBorder  = '#6c9fff';
-const euBorder  = '#ff8c6c';
+function cssVarHex(name, fallback) {
+  const v = (getComputedStyle(document.body).getPropertyValue(name) || '').trim();
+  return /^#([0-9a-f]{6})$/i.test(v) ? v : fallback;
+}
+function hexToRgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
 
-// ─── QUINTILE BAR CHART ────────────────────────────────────────────────
 const qLabels = ['Q0 (Min)','Q1 (P20)','Q2 (P40)','Q3 (P60)','Q4 (P80)','Q5 (Max)'];
 const usVals  = [usQ.q0, usQ.q1, usQ.q2, usQ.q3, usQ.q4, usQ.q5];
 const euVals  = [euQ.q0, euQ.q1, euQ.q2, euQ.q3, euQ.q4, euQ.q5];
-
-// Entity names at each quintile for tooltips
 const usNames = [0,0.2,0.4,0.6,0.8,1].map(q => entityAtQuantile(usStates, q));
 const euNames = [0,0.2,0.4,0.6,0.8,1].map(q => entityAtQuantile(euForQuintiles, q));
 
-new Chart(document.getElementById('quintileChart'), {
-  type: 'bar',
-  data: {
-    labels: qLabels,
-    datasets: [
-      {
-        label: 'US States',
-        data: usVals,
-        backgroundColor: usColor,
-        borderColor: usBorder,
-        borderWidth: 1.5,
-        borderRadius: 6,
-        borderSkipped: false,
-        entityNames: usNames,
-      },
-      {
-        label: 'European Countries',
-        data: euVals,
-        backgroundColor: euColor,
-        borderColor: euBorder,
-        borderWidth: 1.5,
-        borderRadius: 6,
-        borderSkipped: false,
-        entityNames: euNames,
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 1200, easing: 'easeOutQuart' },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1f2330',
-        borderColor: '#2a2e3a',
-        borderWidth: 1,
-        titleFont: { weight: '600' },
-        callbacks: {
-          label: ctx => {
-            const names = ctx.dataset.entityNames;
-            const name = names ? names[ctx.dataIndex] : '';
-            return `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString()}  (≈ ${name})`;
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        grid: { color: 'rgba(255,255,255,0.04)' },
-        ticks: { font: { weight: '600', size: 12 } },
-      },
-      y: {
-        grid: { color: 'rgba(255,255,255,0.06)' },
-        ticks: {
-          callback: v => '$' + (v/1000).toFixed(0) + 'k',
-          font: { size: 11 }
-        },
-        beginAtZero: true,
-      }
-    }
-  }
-});
-
-// ─── STRIP / BEE-SWARM CHART ──────────────────────────────────────────
 const usPoints = usStates.map((d,i) => ({ x: d.v, y: 1 + (i % 5) * 0.12 - 0.24, name: d.name }));
 const euPoints = euCountries.map((d,i) => ({ x: d.v, y: 2 + (i % 5) * 0.12 - 0.24, name: d.name }));
 
-new Chart(document.getElementById('stripChart'), {
-  type: 'scatter',
-  data: {
-    datasets: [
-      {
-        label: 'US States',
-        data: usPoints,
-        backgroundColor: 'rgba(108,159,255,0.7)',
-        borderColor: '#6c9fff',
-        borderWidth: 1,
-        pointRadius: 6,
-        pointHoverRadius: 9,
+let quintileChart = null;
+let stripChart = null;
+
+function buildCharts() {
+  const T = themeChartColors();
+  const usColor = hexToRgba(cssVarHex('--accent-us', '#6c9fff'), 0.85);
+  const euColor = hexToRgba(cssVarHex('--accent-eu', '#ff8c6c'), 0.85);
+  const usBorder = cssVarHex('--accent-us', '#6c9fff');
+  const euBorder = cssVarHex('--accent-eu', '#ff8c6c');
+  Chart.defaults.color = T.fg;
+  Chart.defaults.font.family = "system-ui, -apple-system, sans-serif";
+  Chart.defaults.font.size = 12;
+
+  if (quintileChart) quintileChart.destroy();
+  if (stripChart) stripChart.destroy();
+
+  // ─── QUINTILE BAR CHART ──────────────────────────────────────────────
+  quintileChart = new Chart(document.getElementById('quintileChart'), {
+    type: 'bar',
+    data: {
+      labels: qLabels,
+      datasets: [
+        {
+          label: 'US States',
+          data: usVals,
+          backgroundColor: usColor,
+          borderColor: usBorder,
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+          entityNames: usNames,
+        },
+        {
+          label: 'European Countries',
+          data: euVals,
+          backgroundColor: euColor,
+          borderColor: euBorder,
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+          entityNames: euNames,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 1200, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: T.bg,
+          borderColor: T.border,
+          titleColor: T.fg,
+          bodyColor: T.fg,
+          borderWidth: 1,
+          titleFont: { weight: '600' },
+          callbacks: {
+            label: ctx => {
+              const names = ctx.dataset.entityNames;
+              const name = names ? names[ctx.dataIndex] : '';
+              return `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString()}  (≈ ${name})`;
+            }
+          }
+        }
       },
-      {
-        label: 'European Countries',
-        data: euPoints,
-        backgroundColor: 'rgba(255,140,108,0.7)',
-        borderColor: '#ff8c6c',
-        borderWidth: 1,
-        pointRadius: 6,
-        pointHoverRadius: 9,
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 1400, easing: 'easeOutQuart' },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1f2330',
-        borderColor: '#2a2e3a',
-        borderWidth: 1,
-        callbacks: {
-          title: () => '',
-          label: ctx => `${ctx.raw.name}: $${ctx.raw.x.toLocaleString()}`
+      scales: {
+        x: {
+          grid: { color: T.gridLight },
+          ticks: { font: { weight: '600', size: 12 }, color: T.fg },
+        },
+        y: {
+          grid: { color: T.grid },
+          ticks: {
+            callback: v => '$' + (v/1000).toFixed(0) + 'k',
+            font: { size: 11 },
+            color: T.fg,
+          },
+          beginAtZero: true,
         }
       }
+    }
+  });
+
+  // ─── STRIP / BEE-SWARM CHART ─────────────────────────────────────────
+  stripChart = new Chart(document.getElementById('stripChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'US States',
+          data: usPoints,
+          backgroundColor: hexToRgba(cssVarHex('--accent-us', '#6c9fff'), 0.7),
+          borderColor: usBorder,
+          borderWidth: 1,
+          pointRadius: 6,
+          pointHoverRadius: 9,
+        },
+        {
+          label: 'European Countries',
+          data: euPoints,
+          backgroundColor: hexToRgba(cssVarHex('--accent-eu', '#ff8c6c'), 0.7),
+          borderColor: euBorder,
+          borderWidth: 1,
+          pointRadius: 6,
+          pointHoverRadius: 9,
+        }
+      ]
     },
-    scales: {
-      x: {
-        title: { display: true, text: 'GDP per Capita (USD)', font: { size: 12, weight: '500' } },
-        grid: { color: 'rgba(255,255,255,0.06)' },
-        ticks: {
-          callback: v => '$' + (v/1000).toFixed(0) + 'k',
-          font: { size: 11 },
-        },
-        min: 15000,
-        max: 165000,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 1400, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: T.bg,
+          borderColor: T.border,
+          titleColor: T.fg,
+          bodyColor: T.fg,
+          borderWidth: 1,
+          callbacks: {
+            title: () => '',
+            label: ctx => `${ctx.raw.name}: $${ctx.raw.x.toLocaleString()}`
+          }
+        }
       },
-      y: {
-        grid: { display: false },
-        ticks: {
-          callback: function(v) {
-            if (Math.abs(v - 1) < 0.01) return 'US States';
-            if (Math.abs(v - 2) < 0.01) return 'Europe';
-            return '';
+      scales: {
+        x: {
+          title: { display: true, text: 'GDP per Capita (USD)', font: { size: 12, weight: '500' }, color: T.fg },
+          grid: { color: T.grid },
+          ticks: {
+            callback: v => '$' + (v/1000).toFixed(0) + 'k',
+            font: { size: 11 },
+            color: T.fg,
           },
-          font: { size: 13, weight: '600' },
-          stepSize: 1,
+          min: 20000,
+          max: 160000,
         },
-        min: 0.3,
-        max: 2.7,
+        y: {
+          grid: { display: false },
+          ticks: {
+            callback: function(v) {
+              if (Math.abs(v - 1) < 0.01) return 'US States';
+              if (Math.abs(v - 2) < 0.01) return 'Europe';
+              return '';
+            },
+            font: { size: 13, weight: '600' },
+            stepSize: 1,
+            color: T.fg,
+          },
+          min: 0.3,
+          max: 2.7,
+        }
       }
     }
-  }
-});
+  });
+}
 
+// ─── TABLE PALETTE COLORS ─────────────────────────────────────────────
+function updateTableColors() {
+    const table = document.getElementById('dataTable');
+    if (!table) return;
 
+    const cells = table.querySelectorAll('tbody td[data-field][data-val]');
+    cells.forEach(cell => {
+        const field = cell.getAttribute('data-field');
+        const rawVal = parseFloat(cell.getAttribute('data-val'));
+        if (!field || Number.isNaN(rawVal)) return;
+
+        if (field === 'GDP pc 2025') {
+            const colorValue = Math.max(20000, Math.min(130000, rawVal));
+            const rgb = getPaletteColor(colorValue, 20000, 130000, false);
+            applyBackgroundWithContrast(cell, rgb);
+        }
+    });
+}
+
+(function() {
+    const previousSetPalette = window.setPalette;
+    if (typeof previousSetPalette === 'function') {
+        window.setPalette = function(name) {
+            previousSetPalette(name);
+            updateTableColors();
+            buildCharts();
+        };
+    }
+
+    const previousSetTheme = window.setTheme;
+    if (typeof previousSetTheme === 'function') {
+        window.setTheme = function(name) {
+            previousSetTheme(name);
+            updateTableColors();
+            buildCharts();
+        };
+    }
+
+    const previousRenderTable = window.renderTable;
+    window.renderTable = function() {
+        if (typeof previousRenderTable === 'function') {
+            previousRenderTable();
+        }
+        updateTableColors();
+    };
+})();
 </script>
 </body>
 </html>

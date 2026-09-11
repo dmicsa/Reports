@@ -1,131 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cooking Fats & Oils — Health Quality Comparison</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:      #0f1117;
-    --surface: #181b24;
-    --border:  #2a2e3a;
-    --fg:      #e4e6ed;
-    --fg-dim:  #8b90a0;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: var(--bg); color: var(--fg);
-    min-height: 100vh; padding: 2rem;
-  }
-  .container { max-width: 98vw; margin: 0 auto; }
+  <meta charset="UTF-8">
+  <meta name="darkreader-lock">
+  <title>Cooking Fats &amp; Oils — Health Quality Comparison</title>
+  <link rel="stylesheet" href="https://dmicsa.github.io/HTMLAssets/Theme.css">
+  <style>
+    body { background-color: var(--bg-color); color: var(--fg-color); margin: 20px; transition: background-color 0.3s, color 0.3s; }
+    /* Controls handled by report-header in Theme.css */
+    .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .subtitle { font-size: 15px; color: var(--fg-color); opacity: 0.75; margin-top: 4px; }
+    .sources-note { font-size: 15px; line-height: 1.6; border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px; }
+    .sources-list { font-size: 15px; line-height: 1.6; }
+    .legend-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 12px 0 0; flex-wrap: wrap; }
+    .legend-gradient { width: 200px; height: 12px; border-radius: 4px; border: 1px solid var(--border-color);
+      background: linear-gradient(90deg, oklch(0.55 0.18 25), var(--bg-color), oklch(0.55 0.18 143)); }
+    .legend-label { font-size: 13px; color: var(--fg-color); opacity: 0.75; }
+      /* Numeric columns 50% wider (Theme.css pins .col-num at 80px) */
+    .grid-table td.col-num, .grid-table th.col-num {
+      width: 120px !important;
+      min-width: 120px !important;
+      max-width: 120px !important;
+    }</style>
+  <script src="https://dmicsa.github.io/HTMLAssets/Standard.js"></script>
+  <script>
+    let currentSortCol = -1;
+    let currentSortAsc = true;
 
-  header { text-align: center; margin-bottom: 1.5rem; }
-  header h1 {
-    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
-    color: #FDF6E3; margin-bottom: .4rem;
-  }
-  header p { color: var(--fg-dim); font-size: .9rem; }
+    function setSortArrow(colIndex) {
+      const table = document.getElementById('fatTable');
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      const ths = Array.from(table.querySelectorAll('thead th'));
+      const trs = Array.from(tbody.querySelectorAll('tr'));
 
-  .card {
-    background: var(--surface);
-    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
-    position: relative; overflow-x: auto;
-  }
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
-  }
+      if (currentSortCol === colIndex) {
+          currentSortAsc = !currentSortAsc;
+      } else {
+          currentSortCol = colIndex;
+          currentSortAsc = true;
+          if (colIndex > 4) currentSortAsc = false;
+      }
 
-  table {
-    width: 100%; border-collapse: collapse; font-size: .82rem;
-    white-space: nowrap;
-  }
-  thead th {
-    background: #1e2130; position: sticky; top: 0;
-    padding: .65rem .6rem; text-align: right;
-    border-bottom: 2px solid var(--border);
-    cursor: pointer; user-select: none;
-    color: var(--fg-dim); font-weight: 600; font-size: .72rem;
-    text-transform: uppercase; letter-spacing: .04em;
-    transition: color 0.15s;
-  }
-  thead th:hover { color: var(--fg); }
-  thead th:first-child { text-align: left; }
-  thead th .arrow { font-size: .65rem; margin-left: .2rem; opacity: 0.4; }
-  thead th.sorted .arrow { opacity: 1; color: oklch(0.6 0.15 143); }
-  thead th.sorted { color: var(--fg); }
+      ths.forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+      const th = ths[colIndex];
+      if (th) th.classList.add(currentSortAsc ? 'sort-asc' : 'sort-desc');
 
-  tbody td {
-    padding: .55rem .6rem; text-align: right;
-    border-bottom: 1px solid #1e222e;
-  }
-  tbody td:first-child {
-    text-align: left; font-weight: 600; color: var(--fg);
-    position: sticky; left: 0; background: var(--surface);
-  }
-  tbody tr:hover td { background: #1c2035; }
-  tbody tr:hover td:first-child { background: #1c2035; }
+      const ascMult = currentSortAsc ? 1 : -1;
 
-  .bar-cell {
-    position: relative; min-width: 60px;
-  }
-  .bar-bg {
-    position: absolute; top: 2px; bottom: 2px; left: 0;
-    border-radius: 3px; opacity: 0.25;
-  }
-  .bar-val { position: relative; z-index: 1; }
+      trs.sort((a, b) => {
+          let cellA = a.children[colIndex];
+          let cellB = b.children[colIndex];
+          if (!cellA || !cellB) return 0;
 
-  .score-cell {
-    font-weight: 800; font-size: .95rem;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  }
+          let valA = cellA.getAttribute('data-val');
+          if (!valA) valA = cellA.innerText.trim();
+          let valB = cellB.getAttribute('data-val');
+          if (!valB) valB = cellB.innerText.trim();
 
-  .legend-bar {
-    display: flex; align-items: center; justify-content: center;
-    gap: .5rem; margin: 1rem 0 0; flex-wrap: wrap;
-  }
-  .legend-gradient {
-    width: 200px; height: 12px; border-radius: 4px;
-    background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143));
-  }
-  .legend-label { font-size: .7rem; color: var(--fg-dim); font-weight: 500; }
+          let fA = parseFloat(valA);
+          let fB = parseFloat(valB);
 
-  .sources {
-    background: var(--surface);
-    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
-  }
-  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
-  .sources ul { list-style: none; padding: 0; }
-  .sources li {
-    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
-    padding-left: 1rem; position: relative; line-height: 1.5;
-  }
-  .sources li::before { content: '→'; position: absolute; left: 0; }
-  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
-  .sources a:hover { text-decoration: underline; }
-  .sources .note {
-    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
-    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
-  }
-</style>
+          if (!isNaN(fA) && !isNaN(fB)) return (fA - fB) * ascMult;
+          return valA.localeCompare(valB) * ascMult;
+      });
+
+      trs.forEach(tr => tbody.appendChild(tr));
+      if (typeof updateTableColors === 'function') updateTableColors();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+       initStandard();
+       setSortArrow(11);
+       refreshMetaChips(document);
+       updateTableColors();
+    });
+  </script>
 </head>
-<body>
-<div class="container">
-
-  <header>
-    <h1>Cooking Fats & Oils — Health Quality</h1>
-    <p>10 key components per 100 g, normalized, sorted by composite health score · RG palette (OKLCH)</p>
-    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
-  </header>
+<body class="solarized-light">
+  <div class="report-header">
+    <div>
+      <h1>Cooking Fats &amp; Oils — Health Quality</h1>
+      <div class="subtitle">10 key components per 100 g, normalized, sorted by composite health score</div>
+    </div>
+    <div class="controls-group">
+      <div class="palette-dropdown">
+        <input type="checkbox" id="palette-toggle">
+        <label for="palette-toggle" class="palette-button" id="palette-btn-label">
+          <span id="current-palette-name">Loading...</span>
+        </label>
+        <div class="palette-menu" id="palette-menu"></div>
+      </div>
+      <select id="themeSelect" onchange="setTheme(this.value)" title="Select Theme">
+        <option value="solarized-light" selected>Solarized Light</option>
+        <option value="dark">Dark</option>
+        <option value="kiwi-dark">Kiwi Dark</option>
+        <option value="kiwi-light">Kiwi Light</option>
+        <option value="light">Light</option>
+        <option value="mint-haze">Mint Haze</option>
+        <option value="mint-haze-dark">Mint Haze Dark</option>
+        <option value="oil">Oil</option>
+        <option value="petal-blush">Petal Blush</option>
+        <option value="petal-blush-dark">Petal Blush Dark</option>
+        <option value="rose-linen">Rose Linen</option>
+        <option value="rose-linen-dark">Rose Linen Dark</option>
+        <option value="rust-brown">Rust Brown</option>
+        <option value="sage-sea">Sage Sea</option>
+        <option value="sage-sea-dark">Sage Sea Dark</option>
+        <option value="warm-sand">Warm Sand</option>
+        <option value="warm-sand-dark">Warm Sand Dark</option>
+      </select>
+    </div>
+  </div>
 
   <div class="card">
-    <table id="fatTable">
+    <table id="fatTable" class="grid-table">
       <thead>
-        <tr id="headerRow"></tr>
+        <tr>
+          <th class="col-name" onclick="setSortArrow(0)">Fat / Oil</th>
+          <th class="col-num" onclick="setSortArrow(1)">SFA (g)</th>
+          <th class="col-num" onclick="setSortArrow(2)">MUFA (g)</th>
+          <th class="col-num" onclick="setSortArrow(3)">PUFA (g)</th>
+          <th class="col-num" onclick="setSortArrow(4)">&#969;-6 (g)</th>
+          <th class="col-num" onclick="setSortArrow(5)">&#969;-3 (g)</th>
+          <th class="col-num" onclick="setSortArrow(6)">&#969;6:&#969;3</th>
+          <th class="col-num" onclick="setSortArrow(7)">Trans (g)</th>
+          <th class="col-num" onclick="setSortArrow(8)">Vit E (mg)</th>
+          <th class="col-num" onclick="setSortArrow(9)">Smoke Pt (&#176;C)</th>
+          <th class="col-num" onclick="setSortArrow(10)">Ox Stability (h)</th>
+          <th class="col-num" onclick="setSortArrow(11)">Health Score</th>
+        </tr>
       </thead>
-      <tbody id="tableBody"></tbody>
+      <tbody>
+        <tr><td class="col-name" data-field="Name" data-val="Extra Virgin Olive">Extra Virgin Olive</td><td class="col-num" data-field="SFA" data-val="13.8">13.8</td><td class="col-num" data-field="MUFA" data-val="73">73.0</td><td class="col-num" data-field="PUFA" data-val="10.5">10.5</td><td class="col-num" data-field="Omega-6" data-val="9.8">9.8</td><td class="col-num" data-field="Omega-3" data-val="0.76">0.76</td><td class="col-num" data-field="Ratio" data-val="12.9">12.9</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="14.4">14.4</td><td class="col-num" data-field="Smoke" data-val="190">190</td><td class="col-num" data-field="OxStab" data-val="14">14.0</td><td class="col-num" data-field="Score" data-val="59.90">60</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Avocado Oil">Avocado Oil</td><td class="col-num" data-field="SFA" data-val="11.6">11.6</td><td class="col-num" data-field="MUFA" data-val="70.6">70.6</td><td class="col-num" data-field="PUFA" data-val="13.5">13.5</td><td class="col-num" data-field="Omega-6" data-val="12.5">12.5</td><td class="col-num" data-field="Omega-3" data-val="0.96">0.96</td><td class="col-num" data-field="Ratio" data-val="13">13.0</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="12">12.0</td><td class="col-num" data-field="Smoke" data-val="271">271</td><td class="col-num" data-field="OxStab" data-val="12">12.0</td><td class="col-num" data-field="Score" data-val="63.70">64</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Coconut Oil">Coconut Oil</td><td class="col-num" data-field="SFA" data-val="82.5">82.5</td><td class="col-num" data-field="MUFA" data-val="6.3">6.3</td><td class="col-num" data-field="PUFA" data-val="1.7">1.7</td><td class="col-num" data-field="Omega-6" data-val="1.7">1.7</td><td class="col-num" data-field="Omega-3" data-val="0.02">0.02</td><td class="col-num" data-field="Ratio" data-val="85">85.0</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="0.1">0.1</td><td class="col-num" data-field="Smoke" data-val="232">232</td><td class="col-num" data-field="OxStab" data-val="36">36.0</td><td class="col-num" data-field="Score" data-val="44.00">44</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Butter">Butter</td><td class="col-num" data-field="SFA" data-val="51.4">51.4</td><td class="col-num" data-field="MUFA" data-val="21">21.0</td><td class="col-num" data-field="PUFA" data-val="3">3.0</td><td class="col-num" data-field="Omega-6" data-val="2.2">2.2</td><td class="col-num" data-field="Omega-3" data-val="0.32">0.32</td><td class="col-num" data-field="Ratio" data-val="6.9">6.9</td><td class="col-num" data-field="Trans" data-val="3.28">3.28</td><td class="col-num" data-field="VitE" data-val="2.3">2.3</td><td class="col-num" data-field="Smoke" data-val="150">150</td><td class="col-num" data-field="OxStab" data-val="4">4.0</td><td class="col-num" data-field="Score" data-val="34.80">35</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Ghee">Ghee</td><td class="col-num" data-field="SFA" data-val="61.9">61.9</td><td class="col-num" data-field="MUFA" data-val="28.7">28.7</td><td class="col-num" data-field="PUFA" data-val="3.7">3.7</td><td class="col-num" data-field="Omega-6" data-val="2.8">2.8</td><td class="col-num" data-field="Omega-3" data-val="0.47">0.47</td><td class="col-num" data-field="Ratio" data-val="6">6.0</td><td class="col-num" data-field="Trans" data-val="2.5">2.50</td><td class="col-num" data-field="VitE" data-val="2.8">2.8</td><td class="col-num" data-field="Smoke" data-val="252">252</td><td class="col-num" data-field="OxStab" data-val="9">9.0</td><td class="col-num" data-field="Score" data-val="44.40">44</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Lard">Lard</td><td class="col-num" data-field="SFA" data-val="39.2">39.2</td><td class="col-num" data-field="MUFA" data-val="45.1">45.1</td><td class="col-num" data-field="PUFA" data-val="11.2">11.2</td><td class="col-num" data-field="Omega-6" data-val="10.2">10.2</td><td class="col-num" data-field="Omega-3" data-val="1">1.00</td><td class="col-num" data-field="Ratio" data-val="10.2">10.2</td><td class="col-num" data-field="Trans" data-val="0.1">0.10</td><td class="col-num" data-field="VitE" data-val="0.6">0.6</td><td class="col-num" data-field="Smoke" data-val="190">190</td><td class="col-num" data-field="OxStab" data-val="8">8.0</td><td class="col-num" data-field="Score" data-val="50.50">50</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Tallow (Beef)">Tallow (Beef)</td><td class="col-num" data-field="SFA" data-val="49.8">49.8</td><td class="col-num" data-field="MUFA" data-val="41.8">41.8</td><td class="col-num" data-field="PUFA" data-val="4">4.0</td><td class="col-num" data-field="Omega-6" data-val="3.1">3.1</td><td class="col-num" data-field="Omega-3" data-val="0.6">0.60</td><td class="col-num" data-field="Ratio" data-val="5.2">5.2</td><td class="col-num" data-field="Trans" data-val="2.6">2.60</td><td class="col-num" data-field="VitE" data-val="2.7">2.7</td><td class="col-num" data-field="Smoke" data-val="250">250</td><td class="col-num" data-field="OxStab" data-val="20">20.0</td><td class="col-num" data-field="Score" data-val="50.10">50</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Duck Fat">Duck Fat</td><td class="col-num" data-field="SFA" data-val="33.2">33.2</td><td class="col-num" data-field="MUFA" data-val="49.3">49.3</td><td class="col-num" data-field="PUFA" data-val="12.9">12.9</td><td class="col-num" data-field="Omega-6" data-val="12">12.0</td><td class="col-num" data-field="Omega-3" data-val="0.9">0.90</td><td class="col-num" data-field="Ratio" data-val="13.3">13.3</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="2.7">2.7</td><td class="col-num" data-field="Smoke" data-val="190">190</td><td class="col-num" data-field="OxStab" data-val="10">10.0</td><td class="col-num" data-field="Score" data-val="51.50">52</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Sunflower (Hi-Ol)">Sunflower (Hi-Ol)</td><td class="col-num" data-field="SFA" data-val="9.7">9.7</td><td class="col-num" data-field="MUFA" data-val="83.7">83.7</td><td class="col-num" data-field="PUFA" data-val="3.8">3.8</td><td class="col-num" data-field="Omega-6" data-val="3.6">3.6</td><td class="col-num" data-field="Omega-3" data-val="0.2">0.20</td><td class="col-num" data-field="Ratio" data-val="18">18.0</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="41.1">41.1</td><td class="col-num" data-field="Smoke" data-val="232">232</td><td class="col-num" data-field="OxStab" data-val="25">25.0</td><td class="col-num" data-field="Score" data-val="69.00">69</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Sunflower (Hi-Lin)">Sunflower (Hi-Lin)</td><td class="col-num" data-field="SFA" data-val="10.3">10.3</td><td class="col-num" data-field="MUFA" data-val="19.5">19.5</td><td class="col-num" data-field="PUFA" data-val="65.7">65.7</td><td class="col-num" data-field="Omega-6" data-val="65">65.0</td><td class="col-num" data-field="Omega-3" data-val="0.2">0.20</td><td class="col-num" data-field="Ratio" data-val="325">325.0</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="41.1">41.1</td><td class="col-num" data-field="Smoke" data-val="227">227</td><td class="col-num" data-field="OxStab" data-val="3.5">3.5</td><td class="col-num" data-field="Score" data-val="40.20">40</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Canola Oil">Canola Oil</td><td class="col-num" data-field="SFA" data-val="7.4">7.4</td><td class="col-num" data-field="MUFA" data-val="63.3">63.3</td><td class="col-num" data-field="PUFA" data-val="28.1">28.1</td><td class="col-num" data-field="Omega-6" data-val="18.6">18.6</td><td class="col-num" data-field="Omega-3" data-val="9.14">9.14</td><td class="col-num" data-field="Ratio" data-val="2">2.0</td><td class="col-num" data-field="Trans" data-val="0.04">0.04</td><td class="col-num" data-field="VitE" data-val="17.5">17.5</td><td class="col-num" data-field="Smoke" data-val="204">204</td><td class="col-num" data-field="OxStab" data-val="7">7.0</td><td class="col-num" data-field="Score" data-val="72.00">72</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Soybean Oil">Soybean Oil</td><td class="col-num" data-field="SFA" data-val="15.7">15.7</td><td class="col-num" data-field="MUFA" data-val="22.8">22.8</td><td class="col-num" data-field="PUFA" data-val="57.7">57.7</td><td class="col-num" data-field="Omega-6" data-val="50.4">50.4</td><td class="col-num" data-field="Omega-3" data-val="6.79">6.79</td><td class="col-num" data-field="Ratio" data-val="7.4">7.4</td><td class="col-num" data-field="Trans" data-val="0.53">0.53</td><td class="col-num" data-field="VitE" data-val="8.2">8.2</td><td class="col-num" data-field="Smoke" data-val="234">234</td><td class="col-num" data-field="OxStab" data-val="5">5.0</td><td class="col-num" data-field="Score" data-val="46.70">47</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Corn Oil">Corn Oil</td><td class="col-num" data-field="SFA" data-val="12.9">12.9</td><td class="col-num" data-field="MUFA" data-val="27.6">27.6</td><td class="col-num" data-field="PUFA" data-val="54.7">54.7</td><td class="col-num" data-field="Omega-6" data-val="53.5">53.5</td><td class="col-num" data-field="Omega-3" data-val="1.16">1.16</td><td class="col-num" data-field="Ratio" data-val="46.1">46.1</td><td class="col-num" data-field="Trans" data-val="0.06">0.06</td><td class="col-num" data-field="VitE" data-val="14.8">14.8</td><td class="col-num" data-field="Smoke" data-val="232">232</td><td class="col-num" data-field="OxStab" data-val="5">5.0</td><td class="col-num" data-field="Score" data-val="38.80">39</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Peanut Oil">Peanut Oil</td><td class="col-num" data-field="SFA" data-val="16.9">16.9</td><td class="col-num" data-field="MUFA" data-val="46.2">46.2</td><td class="col-num" data-field="PUFA" data-val="32">32.0</td><td class="col-num" data-field="Omega-6" data-val="32">32.0</td><td class="col-num" data-field="Omega-3" data-val="0">0.00</td><td class="col-num" data-field="Ratio" data-val="999">&#8734;</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="15.7">15.7</td><td class="col-num" data-field="Smoke" data-val="232">232</td><td class="col-num" data-field="OxStab" data-val="8">8.0</td><td class="col-num" data-field="Score" data-val="49.30">49</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Sesame Oil">Sesame Oil</td><td class="col-num" data-field="SFA" data-val="14.2">14.2</td><td class="col-num" data-field="MUFA" data-val="39.7">39.7</td><td class="col-num" data-field="PUFA" data-val="41.7">41.7</td><td class="col-num" data-field="Omega-6" data-val="41.3">41.3</td><td class="col-num" data-field="Omega-3" data-val="0.3">0.30</td><td class="col-num" data-field="Ratio" data-val="137.7">137.7</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="1.4">1.4</td><td class="col-num" data-field="Smoke" data-val="210">210</td><td class="col-num" data-field="OxStab" data-val="6">6.0</td><td class="col-num" data-field="Score" data-val="40.20">40</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Walnut Oil">Walnut Oil</td><td class="col-num" data-field="SFA" data-val="9.1">9.1</td><td class="col-num" data-field="MUFA" data-val="22.8">22.8</td><td class="col-num" data-field="PUFA" data-val="63.3">63.3</td><td class="col-num" data-field="Omega-6" data-val="52.9">52.9</td><td class="col-num" data-field="Omega-3" data-val="10.4">10.40</td><td class="col-num" data-field="Ratio" data-val="5.1">5.1</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="0.4">0.4</td><td class="col-num" data-field="Smoke" data-val="160">160</td><td class="col-num" data-field="OxStab" data-val="2.5">2.5</td><td class="col-num" data-field="Score" data-val="45.60">46</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Flaxseed Oil">Flaxseed Oil</td><td class="col-num" data-field="SFA" data-val="9.4">9.4</td><td class="col-num" data-field="MUFA" data-val="18.4">18.4</td><td class="col-num" data-field="PUFA" data-val="67.8">67.8</td><td class="col-num" data-field="Omega-6" data-val="12.7">12.7</td><td class="col-num" data-field="Omega-3" data-val="53.4">53.40</td><td class="col-num" data-field="Ratio" data-val="0.24">0.2</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="0.5">0.5</td><td class="col-num" data-field="Smoke" data-val="107">107</td><td class="col-num" data-field="OxStab" data-val="1.5">1.5</td><td class="col-num" data-field="Score" data-val="50.30">50</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Grapeseed Oil">Grapeseed Oil</td><td class="col-num" data-field="SFA" data-val="9.6">9.6</td><td class="col-num" data-field="MUFA" data-val="16.1">16.1</td><td class="col-num" data-field="PUFA" data-val="69.9">69.9</td><td class="col-num" data-field="Omega-6" data-val="69.6">69.6</td><td class="col-num" data-field="Omega-3" data-val="0.1">0.10</td><td class="col-num" data-field="Ratio" data-val="696">&#8734;</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="28.8">28.8</td><td class="col-num" data-field="Smoke" data-val="216">216</td><td class="col-num" data-field="OxStab" data-val="3">3.0</td><td class="col-num" data-field="Score" data-val="35.50">36</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Rice Bran Oil">Rice Bran Oil</td><td class="col-num" data-field="SFA" data-val="19.7">19.7</td><td class="col-num" data-field="MUFA" data-val="39.3">39.3</td><td class="col-num" data-field="PUFA" data-val="35">35.0</td><td class="col-num" data-field="Omega-6" data-val="33.4">33.4</td><td class="col-num" data-field="Omega-3" data-val="1.6">1.60</td><td class="col-num" data-field="Ratio" data-val="20.9">20.9</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="32.3">32.3</td><td class="col-num" data-field="Smoke" data-val="254">254</td><td class="col-num" data-field="OxStab" data-val="9">9.0</td><td class="col-num" data-field="Score" data-val="54.50">54</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Palm Oil">Palm Oil</td><td class="col-num" data-field="SFA" data-val="49.3">49.3</td><td class="col-num" data-field="MUFA" data-val="37">37.0</td><td class="col-num" data-field="PUFA" data-val="9.3">9.3</td><td class="col-num" data-field="Omega-6" data-val="9.1">9.1</td><td class="col-num" data-field="Omega-3" data-val="0.2">0.20</td><td class="col-num" data-field="Ratio" data-val="45.5">45.5</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="15.9">15.9</td><td class="col-num" data-field="Smoke" data-val="235">235</td><td class="col-num" data-field="OxStab" data-val="22">22.0</td><td class="col-num" data-field="Score" data-val="52.70">53</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="MCT Oil">MCT Oil</td><td class="col-num" data-field="SFA" data-val="97">97.0</td><td class="col-num" data-field="MUFA" data-val="0">0.0</td><td class="col-num" data-field="PUFA" data-val="0">0.0</td><td class="col-num" data-field="Omega-6" data-val="0">0.0</td><td class="col-num" data-field="Omega-3" data-val="0">0.00</td><td class="col-num" data-field="Ratio" data-val="0">0.0</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="0">0.0</td><td class="col-num" data-field="Smoke" data-val="160">160</td><td class="col-num" data-field="OxStab" data-val="40">40.0</td><td class="col-num" data-field="Score" data-val="48.60">49</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Almond Oil">Almond Oil</td><td class="col-num" data-field="SFA" data-val="8.2">8.2</td><td class="col-num" data-field="MUFA" data-val="69.9">69.9</td><td class="col-num" data-field="PUFA" data-val="17.4">17.4</td><td class="col-num" data-field="Omega-6" data-val="17.4">17.4</td><td class="col-num" data-field="Omega-3" data-val="0">0.00</td><td class="col-num" data-field="Ratio" data-val="999">&#8734;</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="39.2">39.2</td><td class="col-num" data-field="Smoke" data-val="216">216</td><td class="col-num" data-field="OxStab" data-val="7">7.0</td><td class="col-num" data-field="Score" data-val="62.30">62</td></tr>
+        <tr><td class="col-name" data-field="Name" data-val="Macadamia Oil">Macadamia Oil</td><td class="col-num" data-field="SFA" data-val="15">15.0</td><td class="col-num" data-field="MUFA" data-val="78">78.0</td><td class="col-num" data-field="PUFA" data-val="3">3.0</td><td class="col-num" data-field="Omega-6" data-val="2.6">2.6</td><td class="col-num" data-field="Omega-3" data-val="0">0.00</td><td class="col-num" data-field="Ratio" data-val="999">&#8734;</td><td class="col-num" data-field="Trans" data-val="0">0.00</td><td class="col-num" data-field="VitE" data-val="1.5">1.5</td><td class="col-num" data-field="Smoke" data-val="210">210</td><td class="col-num" data-field="OxStab" data-val="15">15.0</td><td class="col-num" data-field="Score" data-val="53.40">53</td></tr>
+      </tbody>
     </table>
     <div class="legend-bar">
       <span class="legend-label">Worse</span>
@@ -134,205 +164,127 @@
     </div>
   </div>
 
-  <div class="sources">
-    <h3>Data Sources & Methodology</h3>
-    <ul>
-      <li><strong>USDA FoodData Central</strong> — nutritional composition per 100 g.<br>
+  <div class="card">
+    <h3>Data Sources &amp; Methodology</h3>
+    <ul class="sources-list">
+      <li><strong>USDA FoodData Central</strong> — nutritional composition per 100 g.
         <a href="https://fdc.nal.usda.gov/" target="_blank">https://fdc.nal.usda.gov/</a></li>
-      <li><strong>Smoke points:</strong> The Culinary Institute of America / Serious Eats / Wikipedia compilations.</li>
-      <li><strong>Oxidative stability:</strong> Rancimat induction times from peer-reviewed lipid chemistry literature.</li>
+      <li><strong>Smoke points:</strong> The Culinary Institute of America / Serious Eats / Wikipedia compilations. Values vary widely with refining: e.g. refined avocado oil 249&#8211;271&#176;C vs. virgin ~190&#176;C; refined canola 204&#176;C vs. expeller-pressed 190&#8211;232&#176;C.</li>
+      <li><strong>Oxidative stability:</strong> Rancimat induction times from peer-reviewed lipid chemistry literature. Heating studies (e.g. <em>ACTA Scientific Nutritional Health</em>, 2018) show oxidative stability — not smoke point — best predicts degradation products under heat; extra virgin olive oil was the most stable oil tested despite its ~190&#176;C smoke point.</li>
+      <li><strong>Dietary Guidelines for Americans, 2025&#8211;2030</strong> (released Jan 2026): prioritize oils with essential fatty acids such as olive oil; keep saturated fat &lt; 10% of calories. Note the advisory committee's recommendation to replace butter with plant-based oils was not adopted in the final edition.
+        <a href="https://realfood.gov/" target="_blank">https://realfood.gov/</a></li>
     </ul>
-    <div class="note">
-      <strong>Health Score formula:</strong> Composite of 10 sub-scores (each 0–100, then averaged):<br>
-      <strong>Positive:</strong> MUFA%, Omega-3, Vitamin E, Smoke Point, Oxidative Stability →
-      higher = better.<br>
-      <strong>Negative:</strong> SFA%, Trans Fat, Omega-6:3 Ratio →
-      lower = better.<br>
-      <strong>Moderate:</strong> PUFA% → optimal ~15–25%, penalised if too high (oxidation risk) or too low.<br>
-      The score is opinionated and reflects a Mediterranean-diet-aligned perspective favouring
-      MUFA-rich, high-stability fats with low omega-6:3 ratios. Individual health needs may vary.
+    <div class="sources-note">
+      <strong>Health Score formula:</strong> Composite of 10 sub-scores (each 0&#8211;100, then averaged):<br>
+      <strong>Positive:</strong> MUFA%, Omega-3, Vitamin E, Smoke Point, Oxidative Stability &#8594; higher = better.<br>
+      <strong>Negative:</strong> SFA%, Trans Fat, Omega-6:3 Ratio &#8594; lower = better.<br>
+      <strong>Moderate:</strong> PUFA% &#8594; optimal ~15&#8211;25%, penalised if too high (oxidation risk) or too low.<br>
+      <br>
+      <strong>Interpretation caveat (updated 2026):</strong> The score remains opinionated and reflects a
+      Mediterranean-diet-aligned perspective. Current authoritative evidence is more favourable to
+      omega-6-rich seed oils than this weighting implies: the American Heart Association (2024, corrected 2025),
+      a 30-cohort pooled analysis in <em>Circulation</em>, and Johns Hopkins Bloomberg School (2025) find linoleic
+      acid intake is associated with <em>lower</em> cardiovascular risk and is not pro-inflammatory, and that the
+      &#969;6:&#969;3 ratio is a poor risk marker — guidance is to raise omega-3 intake rather than cut omega-6.
+      The largest recent outcome study (Zhang et al., <em>JAMA Internal Medicine</em>, 2025; N&#8776;221,000) found
+      higher butter intake was associated with increased mortality, while plant-based oils (soybean, canola, olive)
+      were associated with lower mortality — replacing butter with plant oils cut estimated premature-death risk by
+      up to 17%. Individual health needs may vary.
     </div>
   </div>
-</div>
+
+  <div class="footer">
+    <p>Cooking Fats &amp; Oils — Health Quality Report v2.0 &copy; 2026 Dan Micsa, PhD (dmicsa@gmail.com)</p>
+    <p>Generated on 2026-09-10</p>
+  </div>
 
 <script>
-// ─── DATA (per 100 g, USDA + literature) ──────────────────────────────
-// Columns: SFA, MUFA, PUFA, ω6, ω3, ω6:ω3, TransFat, VitE, SmokePoint°C, OxStability(h)
-const columns = [
-  {key:"name",    label:"Fat / Oil",       unit:"",   fmt:s=>s, higherBetter:null},
-  {key:"sfa",     label:"SFA",             unit:"g",  fmt:v=>v.toFixed(1), higherBetter:false},
-  {key:"mufa",    label:"MUFA",            unit:"g",  fmt:v=>v.toFixed(1), higherBetter:true},
-  {key:"pufa",    label:"PUFA",            unit:"g",  fmt:v=>v.toFixed(1), higherBetter:null},  // moderate best
-  {key:"omega6",  label:"ω-6",             unit:"g",  fmt:v=>v.toFixed(1), higherBetter:false},
-  {key:"omega3",  label:"ω-3",             unit:"g",  fmt:v=>v.toFixed(2), higherBetter:true},
-  {key:"ratio",   label:"ω6:ω3",           unit:"",   fmt:v=>v.toFixed(1), higherBetter:false},
-  {key:"trans",   label:"Trans",           unit:"g",  fmt:v=>v.toFixed(2), higherBetter:false},
-  {key:"vite",    label:"Vit E",           unit:"mg", fmt:v=>v.toFixed(1), higherBetter:true},
-  {key:"smoke",   label:"Smoke Pt",        unit:"°C", fmt:v=>Math.round(v), higherBetter:true},
-  {key:"oxstab",  label:"Ox Stability",    unit:"h",  fmt:v=>v.toFixed(1), higherBetter:true},
-  {key:"score",   label:"Health Score",    unit:"",   fmt:v=>v.toFixed(0), higherBetter:true},
-];
+function updateTableColors() {
+    const table = document.getElementById('fatTable');
+    if (!table) return;
 
-const data = [
-  // name,                  SFA,  MUFA, PUFA, ω6,   ω3,    ω6:ω3, Trans, VitE, Smoke°C, OxStab(h)
-  {name:"Extra Virgin Olive",sfa:13.8,mufa:73.0,pufa:10.5,omega6:9.8,  omega3:0.76, ratio:12.9, trans:0.00, vite:14.4, smoke:190, oxstab:14.0},
-  {name:"Avocado Oil",       sfa:11.6,mufa:70.6,pufa:13.5,omega6:12.5, omega3:0.96, ratio:13.0, trans:0.00, vite:12.0, smoke:271, oxstab:12.0},
-  {name:"Coconut Oil",       sfa:82.5,mufa:6.3, pufa:1.7, omega6:1.7,  omega3:0.02, ratio:85.0, trans:0.00, vite:0.1,  smoke:232, oxstab:36.0},
-  {name:"Butter",            sfa:51.4,mufa:21.0,pufa:3.0, omega6:2.2,  omega3:0.32, ratio:6.9,  trans:3.28, vite:2.3,  smoke:150, oxstab:4.0},
-  {name:"Ghee",              sfa:61.9,mufa:28.7,pufa:3.7, omega6:2.8,  omega3:0.47, ratio:6.0,  trans:2.50, vite:2.8,  smoke:252, oxstab:9.0},
-  {name:"Lard",              sfa:39.2,mufa:45.1,pufa:11.2,omega6:10.2, omega3:1.00, ratio:10.2, trans:0.10, vite:0.6,  smoke:190, oxstab:8.0},
-  {name:"Tallow (Beef)",     sfa:49.8,mufa:41.8,pufa:4.0, omega6:3.1,  omega3:0.60, ratio:5.2,  trans:2.60, vite:2.7,  smoke:250, oxstab:20.0},
-  {name:"Duck Fat",          sfa:33.2,mufa:49.3,pufa:12.9,omega6:12.0, omega3:0.90, ratio:13.3, trans:0.00, vite:2.7,  smoke:190, oxstab:10.0},
-  {name:"Sunflower (Hi-Ol)", sfa:9.7, mufa:83.7,pufa:3.8, omega6:3.6,  omega3:0.20, ratio:18.0, trans:0.00, vite:41.1, smoke:232, oxstab:25.0},
-  {name:"Sunflower (Hi-Lin)",sfa:10.3,mufa:19.5,pufa:65.7,omega6:65.0, omega3:0.20, ratio:325,  trans:0.00, vite:41.1, smoke:227, oxstab:3.5},
-  {name:"Canola Oil",        sfa:7.4, mufa:63.3,pufa:28.1,omega6:18.6, omega3:9.14, ratio:2.0,  trans:0.04, vite:17.5, smoke:204, oxstab:7.0},
-  {name:"Soybean Oil",       sfa:15.7,mufa:22.8,pufa:57.7,omega6:50.4, omega3:6.79, ratio:7.4,  trans:0.53, vite:8.2,  smoke:234, oxstab:5.0},
-  {name:"Corn Oil",          sfa:12.9,mufa:27.6,pufa:54.7,omega6:53.5, omega3:1.16, ratio:46.1, trans:0.06, vite:14.8, smoke:232, oxstab:5.0},
-  {name:"Peanut Oil",        sfa:16.9,mufa:46.2,pufa:32.0,omega6:32.0, omega3:0.00, ratio:999,  trans:0.00, vite:15.7, smoke:232, oxstab:8.0},
-  {name:"Sesame Oil",        sfa:14.2,mufa:39.7,pufa:41.7,omega6:41.3, omega3:0.30, ratio:137.7,trans:0.00, vite:1.4,  smoke:210, oxstab:6.0},
-  {name:"Walnut Oil",        sfa:9.1, mufa:22.8,pufa:63.3,omega6:52.9, omega3:10.4, ratio:5.1,  trans:0.00, vite:0.4,  smoke:160, oxstab:2.5},
-  {name:"Flaxseed Oil",      sfa:9.4, mufa:18.4,pufa:67.8,omega6:12.7, omega3:53.4, ratio:0.24, trans:0.00, vite:0.5,  smoke:107, oxstab:1.5},
-  {name:"Grapeseed Oil",     sfa:9.6, mufa:16.1,pufa:69.9,omega6:69.6, omega3:0.10, ratio:696,  trans:0.00, vite:28.8, smoke:216, oxstab:3.0},
-  {name:"Rice Bran Oil",     sfa:19.7,mufa:39.3,pufa:35.0,omega6:33.4, omega3:1.60, ratio:20.9, trans:0.00, vite:32.3, smoke:254, oxstab:9.0},
-  {name:"Palm Oil",          sfa:49.3,mufa:37.0,pufa:9.3, omega6:9.1,  omega3:0.20, ratio:45.5, trans:0.00, vite:15.9, smoke:235, oxstab:22.0},
-  {name:"MCT Oil",           sfa:97.0,mufa:0.0, pufa:0.0, omega6:0.0,  omega3:0.00, ratio:0,    trans:0.00, vite:0.0,  smoke:160, oxstab:40.0},
-  {name:"Almond Oil",        sfa:8.2, mufa:69.9,pufa:17.4,omega6:17.4, omega3:0.00, ratio:999,  trans:0.00, vite:39.2, smoke:216, oxstab:7.0},
-  {name:"Macadamia Oil",     sfa:15.0,mufa:78.0,pufa:3.0, omega6:2.6,  omega3:0.00, ratio:999,  trans:0.00, vite:1.5,  smoke:210, oxstab:15.0},
-];
+    const cells = table.querySelectorAll('tbody td[data-field][data-val]');
+    cells.forEach(cell => {
+        const field = cell.getAttribute('data-field');
+        const rawVal = parseFloat(cell.getAttribute('data-val'));
+        if (!field || Number.isNaN(rawVal)) return;
 
-// ─── HEALTH SCORE (0–100) ─────────────────────────────────────────────
-// Weights and scoring for each component
-function computeScore(d) {
-  const scores = [];
-  // 1. SFA — lower is better (0–100 scale: 0g→100, 100g→0)
-  scores.push(Math.max(0, 100 - d.sfa));
-  // 2. MUFA — higher is better (0g→0, 85g→100)
-  scores.push(Math.min(100, d.mufa / 85 * 100));
-  // 3. PUFA — moderate is best (~20% optimal, penalise >40% heavily)
-  const pufaOpt = 20;
-  scores.push(Math.max(0, 100 - Math.abs(d.pufa - pufaOpt) * 2.5));
-  // 4. Omega-6 — lower is better (0→100, 70→0)
-  scores.push(Math.max(0, 100 - d.omega6 / 70 * 100));
-  // 5. Omega-3 — higher is better (0→0, 10→100, cap at 100)
-  scores.push(Math.min(100, d.omega3 / 10 * 100));
-  // 6. ω6:ω3 ratio — lower is better (1→100, 20→0). Cap ridiculous ratios.
-  const ratioVal = Math.min(d.ratio, 100);
-  scores.push(Math.max(0, 100 - ratioVal * 5));
-  // 7. Trans fat — lower is better (0→100, 3.5→0)
-  scores.push(Math.max(0, 100 - d.trans / 3.5 * 100));
-  // 8. Vitamin E — higher is better (0→0, 40→100)
-  scores.push(Math.min(100, d.vite / 40 * 100));
-  // 9. Smoke point — higher is better (100°C→0, 280°C→100)
-  scores.push(Math.max(0, Math.min(100, (d.smoke - 100) / 180 * 100)));
-  // 10. Oxidative stability — higher is better (0h→0, 40h→100)
-  scores.push(Math.min(100, d.oxstab / 40 * 100));
+        let min = 0.0;
+        let max = 1.0;
+        let reverse = false;
+        let colorValue = rawVal;
+        let usePalette = false;
 
-  return scores.reduce((a, b) => a + b, 0) / scores.length;
-}
-
-data.forEach(d => { d.score = computeScore(d); });
-
-// ─── RG PALETTE ───────────────────────────────────────────────────────
-function scoreToColor(score, min, max) {
-  let t = (score - min) / (max - min);
-  t = Math.max(0, Math.min(1, t));
-  let L, C, hue;
-  if (t <= 0.5) {
-    const s = t * 2;
-    L   = 0.50 + s * (0.97 - 0.50);
-    C   = 0.20 + s * (0.02 - 0.20);
-    hue = 25   + s * (95   - 25);
-  } else {
-    const s = (t - 0.5) * 2;
-    L   = 0.97 + s * (0.50 - 0.97);
-    C   = 0.02 + s * (0.20 - 0.02);
-    hue = 95   + s * (143  - 95);
-  }
-  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
-}
-
-// ─── RENDER TABLE ─────────────────────────────────────────────────────
-let sortCol = "score";
-let sortAsc = false;
-
-function getRange(key) {
-  const vals = data.map(d => d[key]).filter(v => typeof v === 'number' && isFinite(v));
-  return { min: Math.min(...vals), max: Math.max(...vals) };
-}
-
-function renderHeaders() {
-  const row = document.getElementById("headerRow");
-  row.innerHTML = "";
-  columns.forEach(col => {
-    const th = document.createElement("th");
-    const isSorted = sortCol === col.key;
-    th.className = isSorted ? "sorted" : "";
-    const arrow = col.key === "name" ? "" :
-      `<span class="arrow">${isSorted ? (sortAsc ? "▲" : "▼") : "⇅"}</span>`;
-    th.innerHTML = `${col.label}${col.unit ? " <small>("+col.unit+")</small>" : ""} ${arrow}`;
-    th.onclick = () => {
-      if (col.key === "name") return;
-      if (sortCol === col.key) sortAsc = !sortAsc;
-      else { sortCol = col.key; sortAsc = col.higherBetter === false; }
-      renderTable();
-    };
-    row.appendChild(th);
-  });
-}
-
-function renderTable() {
-  renderHeaders();
-  const sorted = [...data].sort((a, b) => {
-    const va = a[sortCol], vb = b[sortCol];
-    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-    return sortAsc ? va - vb : vb - va;
-  });
-
-  const tbody = document.getElementById("tableBody");
-  tbody.innerHTML = "";
-
-  sorted.forEach(d => {
-    const tr = document.createElement("tr");
-    columns.forEach(col => {
-      const td = document.createElement("td");
-      const val = d[col.key];
-      if (col.key === "name") {
-        td.textContent = val;
-      } else {
-        const range = getRange(col.key);
-        // Display value
-        if (col.key === "ratio") {
-          td.textContent = val >= 500 ? "∞" : col.fmt(val);
-        } else {
-          td.textContent = col.fmt(val);
+        if (field === 'SFA') {
+            usePalette = true;
+            colorValue = Math.max(0, Math.min(50, rawVal));
+            min = 0; max = 50; reverse = true;
+        } else if (field === 'MUFA') {
+            usePalette = true;
+            colorValue = Math.max(0, Math.min(85, rawVal));
+            min = 0; max = 85;
+        } else if (field === 'PUFA') {
+            usePalette = true;
+            colorValue = Math.min(50, Math.abs(rawVal - 20));
+            min = 0; max = 50; reverse = true;
+        } else if (field === 'Omega-6') {
+            usePalette = true;
+            colorValue = Math.max(0, Math.min(65, rawVal));
+            min = 0; max = 65; reverse = true;
+        } else if (field === 'Omega-3') {
+            usePalette = true;
+            colorValue = Math.max(0, Math.min(10, rawVal));
+            min = 0; max = 10;
+        } else if (field === 'Ratio') {
+            usePalette = true;
+            colorValue = Math.min(100, rawVal);
+            min = 0; max = 100; reverse = true;
+        } else if (field === 'Trans') {
+            usePalette = true;
+            colorValue = Math.max(0, Math.min(3.5, rawVal));
+            min = 0; max = 3.5; reverse = true;
+        } else if (field === 'VitE') {
+            usePalette = true;
+            colorValue = Math.max(0, Math.min(41, rawVal));
+            min = 0; max = 41;
+        } else if (field === 'Smoke') {
+            usePalette = true;
+            colorValue = Math.max(100, Math.min(280, rawVal));
+            min = 100; max = 280;
+        } else if (field === 'OxStab') {
+            usePalette = true;
+            colorValue = Math.max(0, Math.min(40, rawVal));
+            min = 0; max = 40;
+        } else if (field === 'Score') {
+            usePalette = true;
+            colorValue = Math.max(0, Math.min(100, rawVal));
+            min = 0; max = 100;
         }
-        // Color by health direction using RG palette
-        if (col.key === "score") {
-          td.className = "score-cell";
-          td.style.color = scoreToColor(val, range.min, range.max);
-        } else if (col.key === "pufa") {
-          // PUFA: moderate is best (~20g optimal)
-          const optDist = Math.abs(val - 20);
-          const maxDist = Math.max(Math.abs(range.max - 20), Math.abs(range.min - 20));
-          td.style.color = scoreToColor(optDist, maxDist, 0);  // closer to 0 dist = greener
-        } else if (col.key === "ratio") {
-          // Ratio: cap at 100 for color, lower is better
-          const capped = Math.min(val, 100);
-          td.style.color = scoreToColor(capped, 100, 0);
-        } else if (col.higherBetter === true) {
-          td.style.color = scoreToColor(val, range.min, range.max);
-        } else if (col.higherBetter === false) {
-          td.style.color = scoreToColor(val, range.max, range.min);  // reversed
+
+        if (usePalette) {
+            const rgb = getPaletteColor(colorValue, min, max, reverse);
+            applyBackgroundWithContrast(cell, rgb);
         }
-        td.style.fontWeight = "600";
-      }
-      tr.appendChild(td);
     });
-    tbody.appendChild(tr);
-  });
 }
 
-renderTable();
+(function() {
+    const previousSetPalette = window.setPalette;
+    if (typeof previousSetPalette === 'function') {
+        window.setPalette = function(name) {
+            previousSetPalette(name);
+            updateTableColors();
+        };
+    }
+
+    const previousRenderTable = window.renderTable;
+    window.renderTable = function() {
+        if (typeof previousRenderTable === 'function') {
+            previousRenderTable();
+        }
+        updateTableColors();
+    };
+})();
 </script>
 </body>
 </html>

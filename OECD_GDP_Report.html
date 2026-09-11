@@ -1,149 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OECD GDP Report — All 38 Member States</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:      #0f1117;
-    --surface: #181b24;
-    --border:  #2a2e3a;
-    --fg:      #e4e6ed;
-    --fg-dim:  #8b90a0;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: var(--bg); color: var(--fg);
-    min-height: 100vh; padding: 2rem;
-  }
-  .container { max-width: 98vw; margin: 0 auto; }
+  <meta charset="UTF-8">
+	<meta name="darkreader-lock">
+  <title>OECD GDP Report — All 38 Member States</title>
+  <link rel="stylesheet" href="https://dmicsa.github.io/HTMLAssets/Theme.css">
+  <style>
+    body { background-color: var(--bg-color); color: var(--fg-color); margin: 20px; transition: background-color 0.3s, color 0.3s; }
+    /* Controls handled by report-header in Theme.css */
+    .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .grid-table td.col-dim { opacity: 0.75; }
+    .legend-bar { display: flex; align-items: center; justify-content: center; gap: .5rem; margin: 1rem 0 0; flex-wrap: wrap; }
+    .legend-gradient { width: 200px; height: 12px; border-radius: 4px; background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143)); }
+    .legend-label { font-size: .7rem; opacity: 0.7; font-weight: 500; }
+    .sources { background: var(--panel, transparent); border: 1px solid var(--border-color, transparent); border-radius: 12px; padding: 1.2rem 1.5rem; margin-top: 1.5rem; }
+    .sources h3 { font-size: .95rem; margin: 0 0 .8rem; }
+    .sources ul { list-style: none; padding: 0; margin: 0; }
+    .sources li { font-size: .8rem; opacity: 0.85; margin-bottom: .4rem; padding-left: 1rem; position: relative; line-height: 1.5; }
+    .sources li::before { content: '→'; position: absolute; left: 0; }
+    .sources a { color: var(--link-color, inherit); text-decoration: none; }
+    .sources a:hover { text-decoration: underline; }
+    .sources .note { font-size: .75rem; opacity: 0.75; margin-top: .8rem; border-top: 1px solid var(--border-color, currentColor); padding-top: .8rem; line-height: 1.6; }
+    .chart-section h2 { font-size: 1rem; margin: 0 0 1rem; }
+    .chart-container { width: 100%; overflow-x: auto; }
+    svg .bar-rect { cursor: pointer; transition: opacity 0.15s; }
+    svg .bar-rect:hover { opacity: 0.8; }
+    .tooltip-chart { position: fixed; pointer-events: none; z-index: 100; background: var(--panel, var(--bg-color)); border: 1px solid var(--border-color, var(--fg-color)); border-radius: 8px; padding: .6rem .9rem; font-size: .85rem; display: none; box-shadow: 0 4px 20px color-mix(in srgb, var(--fg-color) 20%, transparent); }
+    .tooltip-chart .tt-name { font-weight: 700; margin-bottom: .15rem; }
+    .tooltip-chart .tt-vals { font-size: .8rem; opacity: 0.85; }
+      /* Numeric columns 50% wider (Theme.css pins .col-num at 80px) */
+    .grid-table td.col-num, .grid-table th.col-num {
+      width: 120px !important;
+      min-width: 120px !important;
+      max-width: 120px !important;
+    }</style>
+  <script src="https://dmicsa.github.io/HTMLAssets/Standard.js"></script>
+  <script>
+    // --- Local State ---
+    let usePercent = false;
+    let currentSortCol = -1;
+    let currentSortAsc = true;
 
-  header { text-align: center; margin-bottom: 1.5rem; }
-  header h1 {
-    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
-    color: #FDF6E3; margin-bottom: .4rem;
-  }
-  header p { color: var(--fg-dim); font-size: .9rem; }
+    // --- Helpers ---
+    function togglePercent() {
+      usePercent = !usePercent;
+      const btn = document.getElementById('percentToggle');
+      if(btn) btn.classList.toggle('active', usePercent);
+      try { localStorage.setItem('ms_percent', usePercent); } catch(e){}
+      updateNumberFormat();
+    }
 
-  .card {
-    background: var(--surface);
-    border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;
-    position: relative; overflow-x: auto;
-  }
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, oklch(0.5 0.2 25), oklch(0.5 0.2 143));
-  }
+    function updateNumberFormat() {
+        const table = document.getElementById('summaryTable');
+        if(!table) return;
 
-  table {
-    width: 100%; border-collapse: collapse; font-size: .82rem;
-    white-space: nowrap;
-  }
-  thead th {
-    background: #1e2130; position: sticky; top: 0;
-    padding: .65rem .6rem; text-align: right;
-    border-bottom: 2px solid var(--border);
-    cursor: pointer; user-select: none;
-    color: var(--fg-dim); font-weight: 600; font-size: .72rem;
-    text-transform: uppercase; letter-spacing: .04em;
-    transition: color 0.15s;
-  }
-  thead th:hover { color: var(--fg); }
-  thead th:first-child { text-align: left; }
-  thead th .arrow { font-size: .65rem; margin-left: .2rem; opacity: 0.4; }
-  thead th.sorted .arrow { opacity: 1; color: oklch(0.6 0.15 143); }
-  thead th.sorted { color: var(--fg); }
+		// Fields that can be toggled to % (none: growth is stored as percentage points)
+		const pctFields = [];
+		const srFields = [];
 
-  tbody td {
-    padding: .55rem .6rem; text-align: right;
-    border-bottom: 1px solid #1e222e;
-  }
-  tbody td:first-child {
-    text-align: left; font-weight: 600; color: var(--fg);
-    position: sticky; left: 0; background: var(--surface); z-index: 1;
-  }
-  tbody tr:hover td { background: #1c2035; }
-  tbody tr:hover td:first-child { background: #1c2035; }
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            Array.from(row.children).forEach(cell => {
+                const f = cell.getAttribute('data-field');
+				const val = parseFloat(cell.getAttribute('data-val'));
+				if (isNaN(val)) return;
 
-  .score-cell {
-    font-weight: 800; font-size: .95rem;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  }
+				if (pctFields.includes(f)) {
+					cell.textContent = usePercent
+						? (val * 100).toFixed(1) + '%'
+						: val.toFixed(2);
+				} else if (srFields.includes(f)) {
+					cell.textContent = val.toFixed(2);
+                }
+            });
+        });
+    }
 
-  .legend-bar {
-    display: flex; align-items: center; justify-content: center;
-    gap: .5rem; margin: 1rem 0 0; flex-wrap: wrap;
-  }
-  .legend-gradient {
-    width: 200px; height: 12px; border-radius: 4px;
-    background: linear-gradient(90deg, oklch(0.5 0.2 25), #FDF6E3, oklch(0.5 0.2 143));
-  }
-  .legend-label { font-size: .7rem; color: var(--fg-dim); font-weight: 500; }
+    function setSortArrow(colIndex) {
+      const table = document.getElementById('summaryTable');
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      const ths = Array.from(table.querySelectorAll('thead th'));
+      const trs = Array.from(tbody.querySelectorAll('tr'));
 
-  .sources {
-    background: var(--surface);
-    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
-  }
-  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
-  .sources ul { list-style: none; padding: 0; }
-  .sources li {
-    font-size: .8rem; color: var(--fg-dim); margin-bottom: .4rem;
-    padding-left: 1rem; position: relative; line-height: 1.5;
-  }
-  .sources li::before { content: '→'; position: absolute; left: 0; }
-  .sources a { color: oklch(0.6 0.15 143); text-decoration: none; }
-  .sources a:hover { text-decoration: underline; }
-  .sources .note {
-    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
-    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
-  }
+      if (currentSortCol === colIndex) {
+          currentSortAsc = !currentSortAsc;
+      } else {
+          currentSortCol = colIndex;
+          currentSortAsc = true;
+		  if (colIndex > 4) currentSortAsc = false;
+      }
 
-  /* SVG chart */
-  .chart-section { margin-top: 1.5rem; }
-  .chart-section h2 {
-    font-size: 1rem; font-weight: 700; margin-bottom: 1rem;
-    color: var(--fg);
-  }
-  .chart-container { width: 100%; overflow-x: auto; }
-  svg .bar-rect { cursor: pointer; transition: opacity 0.15s; }
-  svg .bar-rect:hover { opacity: 0.8; }
+      ths.forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+      const th = ths[colIndex];
+      if (th) th.classList.add(currentSortAsc ? 'sort-asc' : 'sort-desc');
 
-  .tooltip-chart {
-    position: fixed; pointer-events: none; z-index: 100;
-    background: #1f2330ee; border: 1px solid var(--border);
-    border-radius: 8px; padding: .6rem .9rem;
-    font-size: .85rem; display: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  }
-  .tooltip-chart .tt-name { font-weight: 700; margin-bottom: .15rem; }
-  .tooltip-chart .tt-vals { font-size: .8rem; color: var(--fg-dim); }
-</style>
-</head>
-<body>
-<div class="container">
+      const ascMult = currentSortAsc ? 1 : -1;
 
-  <header>
+      trs.sort((a, b) => {
+          let cellA = a.children[colIndex];
+          let cellB = b.children[colIndex];
+          if (!cellA || !cellB) return 0;
+
+          let valA = cellA.getAttribute('data-val');
+          if (!valA) valA = cellA.innerText.trim();
+          let valB = cellB.getAttribute('data-val');
+          if (!valB) valB = cellB.innerText.trim();
+
+          let fA = parseFloat(valA);
+          let fB = parseFloat(valB);
+
+          if (!isNaN(fA) && !isNaN(fB)) return (fA - fB) * ascMult;
+          return valA.localeCompare(valB) * ascMult;
+      });
+
+      trs.forEach(tr => tbody.appendChild(tr));
+      if (typeof updateTableColors === 'function') updateTableColors();
+    }
+
+    const renderTable = updateTableColors;
+
+    document.addEventListener('DOMContentLoaded', () => {
+       initStandard();
+       setSortArrow(0);
+       try {
+          if(localStorage.getItem('ms_percent') === 'true') togglePercent();
+          else updateNumberFormat();
+       } catch(e) {
+          updateNumberFormat();
+       }
+		 refreshMetaChips(document);
+       updateTableColors();
+    });
+  </script></head><body class="solarized-light">
+  <div class="report-header">
     <h1>OECD GDP Report — All 38 Member States</h1>
-    <p>IMF World Economic Outlook, October 2025 · Nominal & PPP GDP, per capita, population, growth</p>
-    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
-  </header>
+  <div class="controls-group">
+    <div class="palette-dropdown">
+      <input type="checkbox" id="palette-toggle">
+      <label for="palette-toggle" class="palette-button" id="palette-btn-label">
+        <span id="current-palette-name">Loading...</span>
+      </label>
+      <div class="palette-menu" id="palette-menu"></div>
+    </div>
+    <select id="themeSelect" onchange="setTheme(this.value)" title="Select Theme">
+      <option value="solarized-light" selected>Solarized Light</option>
+      <option value="dark">Dark</option>
+      <option value="kiwi-dark">Kiwi Dark</option>
+      <option value="kiwi-light">Kiwi Light</option>
+      <option value="light">Light</option>
+      <option value="mint-haze">Mint Haze</option>
+      <option value="mint-haze-dark">Mint Haze Dark</option>
+      <option value="oil">Oil</option>
+      <option value="petal-blush">Petal Blush</option>
+      <option value="petal-blush-dark">Petal Blush Dark</option>
+      <option value="rose-linen">Rose Linen</option>
+      <option value="rose-linen-dark">Rose Linen Dark</option>
+      <option value="rust-brown">Rust Brown</option>
+      <option value="sage-sea">Sage Sea</option>
+      <option value="sage-sea-dark">Sage Sea Dark</option>
+      <option value="warm-sand">Warm Sand</option>
+      <option value="warm-sand-dark">Warm Sand Dark</option>
+    </select>
+  </div>  </div>
 
   <div class="card">
-    <table id="gdpTable">
-      <thead><tr id="headerRow"></tr></thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-    <div class="legend-bar">
-      <span class="legend-label">Lower</span>
-      <div class="legend-gradient"></div>
-      <span class="legend-label">Higher</span>
-    </div>
+  <table id="summaryTable" class="grid-table">
+    <thead>
+      <tr><th onclick="setSortArrow(0)">Country</th><th class="col-num" onclick="setSortArrow(1)">GDP Nominal ($B)</th><th class="col-num" onclick="setSortArrow(2)">GDP PPP ($B)</th><th class="col-num" onclick="setSortArrow(3)">Population (M)</th><th class="col-num" onclick="setSortArrow(4)">GDP/cap Nom. ($)</th><th class="col-num" onclick="setSortArrow(5)">GDP/cap PPP ($)</th><th class="col-num" onclick="setSortArrow(6)">Growth 2025 (%)</th><th class="col-num" onclick="setSortArrow(7)">Growth 2026 (%)</th><th class="col-num" onclick="setSortArrow(8)">PPP/Nom. Ratio</th></tr>
+    </thead>
+    <tbody>
+<tr><td class="col-name" data-field="Country" data-val="Australia">Australia</td><td class="col-num" data-field="GDP Nominal" data-val="1840">1.84T</td><td class="col-num" data-field="GDP PPP" data-val="2000">2.00T</td><td class="col-num col-dim" data-field="Population" data-val="27.7">27.7</td><td class="col-num" data-field="GDP/cap Nom" data-val="66352">$66,352</td><td class="col-num" data-field="GDP/cap PPP" data-val="72132">$72,132</td><td class="col-num" data-field="Growth 2025" data-val="1.99">1.99</td><td class="col-num" data-field="Growth 2026" data-val="1.95">1.95</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.09">1.09</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Austria">Austria</td><td class="col-num" data-field="GDP Nominal" data-val="580">580</td><td class="col-num" data-field="GDP PPP" data-val="696">696</td><td class="col-num col-dim" data-field="Population" data-val="9.2">9.2</td><td class="col-num" data-field="GDP/cap Nom" data-val="63161">$63,161</td><td class="col-num" data-field="GDP/cap PPP" data-val="75825">$75,825</td><td class="col-num" data-field="Growth 2025" data-val="0.62">0.62</td><td class="col-num" data-field="Growth 2026" data-val="0.73">0.73</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.2">1.20</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Belgium">Belgium</td><td class="col-num" data-field="GDP Nominal" data-val="725">725</td><td class="col-num" data-field="GDP PPP" data-val="906">906</td><td class="col-num col-dim" data-field="Population" data-val="11.9">11.9</td><td class="col-num" data-field="GDP/cap Nom" data-val="61002">$61,002</td><td class="col-num" data-field="GDP/cap PPP" data-val="76208">$76,208</td><td class="col-num" data-field="Growth 2025" data-val="0.98">0.98</td><td class="col-num" data-field="Growth 2026" data-val="0.71">0.71</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.25">1.25</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Canada">Canada</td><td class="col-num" data-field="GDP Nominal" data-val="2320">2.32T</td><td class="col-num" data-field="GDP PPP" data-val="2788">2.79T</td><td class="col-num col-dim" data-field="Population" data-val="41.6">41.6</td><td class="col-num" data-field="GDP/cap Nom" data-val="55765">$55,765</td><td class="col-num" data-field="GDP/cap PPP" data-val="67013">$67,013</td><td class="col-num" data-field="Growth 2025" data-val="1.74">1.74</td><td class="col-num" data-field="Growth 2026" data-val="1.16">1.16</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.2">1.20</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Chile">Chile</td><td class="col-num" data-field="GDP Nominal" data-val="355">355</td><td class="col-num" data-field="GDP PPP" data-val="714">714</td><td class="col-num col-dim" data-field="Population" data-val="20.0">20.0</td><td class="col-num" data-field="GDP/cap Nom" data-val="17735">$17,735</td><td class="col-num" data-field="GDP/cap PPP" data-val="35649">$35,649</td><td class="col-num" data-field="Growth 2025" data-val="2.6">2.60</td><td class="col-num" data-field="Growth 2026" data-val="1.65">1.65</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="2.01">2.01</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Colombia">Colombia</td><td class="col-num" data-field="GDP Nominal" data-val="457">457</td><td class="col-num" data-field="GDP PPP" data-val="1196">1.20T</td><td class="col-num col-dim" data-field="Population" data-val="53.0">53.0</td><td class="col-num" data-field="GDP/cap Nom" data-val="8623">$8,623</td><td class="col-num" data-field="GDP/cap PPP" data-val="22543">$22,543</td><td class="col-num" data-field="Growth 2025" data-val="2.57">2.57</td><td class="col-num" data-field="Growth 2026" data-val="2.4">2.40</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="2.61">2.61</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Costa Rica">Costa Rica</td><td class="col-num" data-field="GDP Nominal" data-val="103">103</td><td class="col-num" data-field="GDP PPP" data-val="174">174</td><td class="col-num col-dim" data-field="Population" data-val="5.4">5.4</td><td class="col-num" data-field="GDP/cap Nom" data-val="19162">$19,162</td><td class="col-num" data-field="GDP/cap PPP" data-val="32335">$32,335</td><td class="col-num" data-field="Growth 2025" data-val="4.56">4.56</td><td class="col-num" data-field="Growth 2026" data-val="3.47">3.47</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.69">1.69</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Czech Republic">Czech Republic</td><td class="col-num" data-field="GDP Nominal" data-val="389">389</td><td class="col-num" data-field="GDP PPP" data-val="657">657</td><td class="col-num col-dim" data-field="Population" data-val="10.9">10.9</td><td class="col-num" data-field="GDP/cap Nom" data-val="35678">$35,678</td><td class="col-num" data-field="GDP/cap PPP" data-val="60247">$60,247</td><td class="col-num" data-field="Growth 2025" data-val="2.65">2.65</td><td class="col-num" data-field="Growth 2026" data-val="1.85">1.85</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.69">1.69</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Denmark">Denmark</td><td class="col-num" data-field="GDP Nominal" data-val="462">462</td><td class="col-num" data-field="GDP PPP" data-val="516">516</td><td class="col-num col-dim" data-field="Population" data-val="6.0">6.0</td><td class="col-num" data-field="GDP/cap Nom" data-val="77046">$77,046</td><td class="col-num" data-field="GDP/cap PPP" data-val="86094">$86,094</td><td class="col-num" data-field="Growth 2025" data-val="2.93">2.93</td><td class="col-num" data-field="Growth 2026" data-val="2.55">2.55</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.12">1.12</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Estonia">Estonia</td><td class="col-num" data-field="GDP Nominal" data-val="47">47</td><td class="col-num" data-field="GDP PPP" data-val="68">68</td><td class="col-num col-dim" data-field="Population" data-val="1.4">1.4</td><td class="col-num" data-field="GDP/cap Nom" data-val="34325">$34,325</td><td class="col-num" data-field="GDP/cap PPP" data-val="49492">$49,492</td><td class="col-num" data-field="Growth 2025" data-val="0.52">0.52</td><td class="col-num" data-field="Growth 2026" data-val="1.82">1.82</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.44">1.44</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Finland">Finland</td><td class="col-num" data-field="GDP Nominal" data-val="317">317</td><td class="col-num" data-field="GDP PPP" data-val="372">372</td><td class="col-num col-dim" data-field="Population" data-val="5.6">5.6</td><td class="col-num" data-field="GDP/cap Nom" data-val="56464">$56,464</td><td class="col-num" data-field="GDP/cap PPP" data-val="66297">$66,297</td><td class="col-num" data-field="Growth 2025" data-val="0.17">0.17</td><td class="col-num" data-field="Growth 2026" data-val="0.83">0.83</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.17">1.17</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="France">France</td><td class="col-num" data-field="GDP Nominal" data-val="3369">3.37T</td><td class="col-num" data-field="GDP PPP" data-val="4563">4.56T</td><td class="col-num col-dim" data-field="Population" data-val="68.9">68.9</td><td class="col-num" data-field="GDP/cap Nom" data-val="48930">$48,930</td><td class="col-num" data-field="GDP/cap PPP" data-val="66276">$66,276</td><td class="col-num" data-field="Growth 2025" data-val="0.94">0.94</td><td class="col-num" data-field="Growth 2026" data-val="0.65">0.65</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.35">1.35</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Germany">Germany</td><td class="col-num" data-field="GDP Nominal" data-val="5048">5.05T</td><td class="col-num" data-field="GDP PPP" data-val="6181">6.18T</td><td class="col-num col-dim" data-field="Population" data-val="83.5">83.5</td><td class="col-num" data-field="GDP/cap Nom" data-val="60439">$60,439</td><td class="col-num" data-field="GDP/cap PPP" data-val="74004">$74,004</td><td class="col-num" data-field="Growth 2025" data-val="0.34">0.34</td><td class="col-num" data-field="Growth 2026" data-val="0.66">0.66</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.22">1.22</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Greece">Greece</td><td class="col-num" data-field="GDP Nominal" data-val="280">280</td><td class="col-num" data-field="GDP PPP" data-val="467">467</td><td class="col-num col-dim" data-field="Population" data-val="10.4">10.4</td><td class="col-num" data-field="GDP/cap Nom" data-val="27041">$27,041</td><td class="col-num" data-field="GDP/cap PPP" data-val="44981">$44,981</td><td class="col-num" data-field="Growth 2025" data-val="2.07">2.07</td><td class="col-num" data-field="Growth 2026" data-val="1.88">1.88</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.66">1.66</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Hungary">Hungary</td><td class="col-num" data-field="GDP Nominal" data-val="247">247</td><td class="col-num" data-field="GDP PPP" data-val="461">461</td><td class="col-num col-dim" data-field="Population" data-val="9.6">9.6</td><td class="col-num" data-field="GDP/cap Nom" data-val="25826">$25,826</td><td class="col-num" data-field="GDP/cap PPP" data-val="48239">$48,239</td><td class="col-num" data-field="Growth 2025" data-val="0.51">0.51</td><td class="col-num" data-field="Growth 2026" data-val="1.55">1.55</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.87">1.87</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Iceland">Iceland</td><td class="col-num" data-field="GDP Nominal" data-val="39">39</td><td class="col-num" data-field="GDP PPP" data-val="31">31</td><td class="col-num col-dim" data-field="Population" data-val="0.4">0.4</td><td class="col-num" data-field="GDP/cap Nom" data-val="99071">$99,071</td><td class="col-num" data-field="GDP/cap PPP" data-val="80662">$80,662</td><td class="col-num" data-field="Growth 2025" data-val="1.28">1.28</td><td class="col-num" data-field="Growth 2026" data-val="1.59">1.59</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="0.81">0.81</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Ireland">Ireland</td><td class="col-num" data-field="GDP Nominal" data-val="718">718</td><td class="col-num" data-field="GDP PPP" data-val="839">839</td><td class="col-num col-dim" data-field="Population" data-val="5.5">5.5</td><td class="col-num" data-field="GDP/cap Nom" data-val="130652">$130,652</td><td class="col-num" data-field="GDP/cap PPP" data-val="152632">$152,632</td><td class="col-num" data-field="Growth 2025" data-val="12.39">12.39</td><td class="col-num" data-field="Growth 2026" data-val="-1.04">-1.04</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.17">1.17</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Israel">Israel</td><td class="col-num" data-field="GDP Nominal" data-val="611">611</td><td class="col-num" data-field="GDP PPP" data-val="572">572</td><td class="col-num col-dim" data-field="Population" data-val="10.1">10.1</td><td class="col-num" data-field="GDP/cap Nom" data-val="60335">$60,335</td><td class="col-num" data-field="GDP/cap PPP" data-val="56528">$56,528</td><td class="col-num" data-field="Growth 2025" data-val="2.93">2.93</td><td class="col-num" data-field="Growth 2026" data-val="3.3">3.30</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="0.94">0.94</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Italy">Italy</td><td class="col-num" data-field="GDP Nominal" data-val="2550">2.55T</td><td class="col-num" data-field="GDP PPP" data-val="3745">3.75T</td><td class="col-num col-dim" data-field="Population" data-val="58.9">58.9</td><td class="col-num" data-field="GDP/cap Nom" data-val="43270">$43,270</td><td class="col-num" data-field="GDP/cap PPP" data-val="63538">$63,538</td><td class="col-num" data-field="Growth 2025" data-val="0.54">0.54</td><td class="col-num" data-field="Growth 2026" data-val="0.53">0.53</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.47">1.47</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Japan">Japan</td><td class="col-num" data-field="GDP Nominal" data-val="4435">4.43T</td><td class="col-num" data-field="GDP PPP" data-val="7010">7.01T</td><td class="col-num col-dim" data-field="Population" data-val="123.3">123.3</td><td class="col-num" data-field="GDP/cap Nom" data-val="35973">$35,973</td><td class="col-num" data-field="GDP/cap PPP" data-val="56854">$56,854</td><td class="col-num" data-field="Growth 2025" data-val="1.05">1.05</td><td class="col-num" data-field="Growth 2026" data-val="0.61">0.61</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.58">1.58</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Korea">Korea</td><td class="col-num" data-field="GDP Nominal" data-val="1872">1.87T</td><td class="col-num" data-field="GDP PPP" data-val="3380">3.38T</td><td class="col-num col-dim" data-field="Population" data-val="51.7">51.7</td><td class="col-num" data-field="GDP/cap Nom" data-val="36227">$36,227</td><td class="col-num" data-field="GDP/cap PPP" data-val="65405">$65,405</td><td class="col-num" data-field="Growth 2025" data-val="0.96">0.96</td><td class="col-num" data-field="Growth 2026" data-val="2.63">2.63</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.81">1.81</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Latvia">Latvia</td><td class="col-num" data-field="GDP Nominal" data-val="49">49</td><td class="col-num" data-field="GDP PPP" data-val="81">81</td><td class="col-num col-dim" data-field="Population" data-val="1.9">1.9</td><td class="col-num" data-field="GDP/cap Nom" data-val="26116">$26,116</td><td class="col-num" data-field="GDP/cap PPP" data-val="43509">$43,509</td><td class="col-num" data-field="Growth 2025" data-val="2.14">2.14</td><td class="col-num" data-field="Growth 2026" data-val="1.89">1.89</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.67">1.67</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Lithuania">Lithuania</td><td class="col-num" data-field="GDP Nominal" data-val="95">95</td><td class="col-num" data-field="GDP PPP" data-val="167">167</td><td class="col-num col-dim" data-field="Population" data-val="2.9">2.9</td><td class="col-num" data-field="GDP/cap Nom" data-val="32839">$32,839</td><td class="col-num" data-field="GDP/cap PPP" data-val="57818">$57,818</td><td class="col-num" data-field="Growth 2025" data-val="2.92">2.92</td><td class="col-num" data-field="Growth 2026" data-val="2.84">2.84</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.76">1.76</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Luxembourg">Luxembourg</td><td class="col-num" data-field="GDP Nominal" data-val="101">101</td><td class="col-num" data-field="GDP PPP" data-val="104">104</td><td class="col-num col-dim" data-field="Population" data-val="0.7">0.7</td><td class="col-num" data-field="GDP/cap Nom" data-val="148247">$148,247</td><td class="col-num" data-field="GDP/cap PPP" data-val="152966">$152,966</td><td class="col-num" data-field="Growth 2025" data-val="0.62">0.62</td><td class="col-num" data-field="Growth 2026" data-val="0.73">0.73</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.03">1.03</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Mexico">Mexico</td><td class="col-num" data-field="GDP Nominal" data-val="1833">1.83T</td><td class="col-num" data-field="GDP PPP" data-val="3425">3.42T</td><td class="col-num col-dim" data-field="Population" data-val="133.4">133.4</td><td class="col-num" data-field="GDP/cap Nom" data-val="13741">$13,741</td><td class="col-num" data-field="GDP/cap PPP" data-val="25682">$25,682</td><td class="col-num" data-field="Growth 2025" data-val="0.79">0.79</td><td class="col-num" data-field="Growth 2026" data-val="0.81">0.81</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.87">1.87</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Netherlands">Netherlands</td><td class="col-num" data-field="GDP Nominal" data-val="1332">1.33T</td><td class="col-num" data-field="GDP PPP" data-val="1529">1.53T</td><td class="col-num col-dim" data-field="Population" data-val="18.0">18.0</td><td class="col-num" data-field="GDP/cap Nom" data-val="73833">$73,833</td><td class="col-num" data-field="GDP/cap PPP" data-val="84738">$84,738</td><td class="col-num" data-field="Growth 2025" data-val="1.79">1.79</td><td class="col-num" data-field="Growth 2026" data-val="0.98">0.98</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.15">1.15</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="New Zealand">New Zealand</td><td class="col-num" data-field="GDP Nominal" data-val="259">259</td><td class="col-num" data-field="GDP PPP" data-val="297">297</td><td class="col-num col-dim" data-field="Population" data-val="5.3">5.3</td><td class="col-num" data-field="GDP/cap Nom" data-val="48621">$48,621</td><td class="col-num" data-field="GDP/cap PPP" data-val="55840">$55,840</td><td class="col-num" data-field="Growth 2025" data-val="0.46">0.46</td><td class="col-num" data-field="Growth 2026" data-val="1.41">1.41</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.15">1.15</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Norway">Norway</td><td class="col-num" data-field="GDP Nominal" data-val="531">531</td><td class="col-num" data-field="GDP PPP" data-val="627">627</td><td class="col-num col-dim" data-field="Population" data-val="5.6">5.6</td><td class="col-num" data-field="GDP/cap Nom" data-val="94468">$94,468</td><td class="col-num" data-field="GDP/cap PPP" data-val="111545">$111,545</td><td class="col-num" data-field="Growth 2025" data-val="1.09">1.09</td><td class="col-num" data-field="Growth 2026" data-val="1.31">1.31</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.18">1.18</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Poland">Poland</td><td class="col-num" data-field="GDP Nominal" data-val="1036">1.04T</td><td class="col-num" data-field="GDP PPP" data-val="2036">2.04T</td><td class="col-num col-dim" data-field="Population" data-val="36.5">36.5</td><td class="col-num" data-field="GDP/cap Nom" data-val="28374">$28,374</td><td class="col-num" data-field="GDP/cap PPP" data-val="55793">$55,793</td><td class="col-num" data-field="Growth 2025" data-val="3.63">3.63</td><td class="col-num" data-field="Growth 2026" data-val="3.04">3.04</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.97">1.97</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Portugal">Portugal</td><td class="col-num" data-field="GDP Nominal" data-val="346">346</td><td class="col-num" data-field="GDP PPP" data-val="541">541</td><td class="col-num col-dim" data-field="Population" data-val="10.8">10.8</td><td class="col-num" data-field="GDP/cap Nom" data-val="32166">$32,166</td><td class="col-num" data-field="GDP/cap PPP" data-val="50269">$50,269</td><td class="col-num" data-field="Growth 2025" data-val="1.86">1.86</td><td class="col-num" data-field="Growth 2026" data-val="1.76">1.76</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.56">1.56</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Slovak Republic">Slovak Republic</td><td class="col-num" data-field="GDP Nominal" data-val="154">154</td><td class="col-num" data-field="GDP PPP" data-val="258">258</td><td class="col-num col-dim" data-field="Population" data-val="5.4">5.4</td><td class="col-num" data-field="GDP/cap Nom" data-val="28498">$28,498</td><td class="col-num" data-field="GDP/cap PPP" data-val="47684">$47,684</td><td class="col-num" data-field="Growth 2025" data-val="0.81">0.81</td><td class="col-num" data-field="Growth 2026" data-val="0.71">0.71</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.67">1.67</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Slovenia">Slovenia</td><td class="col-num" data-field="GDP Nominal" data-val="80">80</td><td class="col-num" data-field="GDP PPP" data-val="123">123</td><td class="col-num col-dim" data-field="Population" data-val="2.1">2.1</td><td class="col-num" data-field="GDP/cap Nom" data-val="37357">$37,357</td><td class="col-num" data-field="GDP/cap PPP" data-val="57922">$57,922</td><td class="col-num" data-field="Growth 2025" data-val="1.06">1.06</td><td class="col-num" data-field="Growth 2026" data-val="1.93">1.93</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.55">1.55</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Spain">Spain</td><td class="col-num" data-field="GDP Nominal" data-val="1904">1.90T</td><td class="col-num" data-field="GDP PPP" data-val="2836">2.84T</td><td class="col-num col-dim" data-field="Population" data-val="49.7">49.7</td><td class="col-num" data-field="GDP/cap Nom" data-val="38290">$38,290</td><td class="col-num" data-field="GDP/cap PPP" data-val="57034">$57,034</td><td class="col-num" data-field="Growth 2025" data-val="2.83">2.83</td><td class="col-num" data-field="Growth 2026" data-val="2.19">2.19</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.49">1.49</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Sweden">Sweden</td><td class="col-num" data-field="GDP Nominal" data-val="669">669</td><td class="col-num" data-field="GDP PPP" data-val="791">791</td><td class="col-num col-dim" data-field="Population" data-val="10.7">10.7</td><td class="col-num" data-field="GDP/cap Nom" data-val="62662">$62,662</td><td class="col-num" data-field="GDP/cap PPP" data-val="74081">$74,081</td><td class="col-num" data-field="Growth 2025" data-val="1.81">1.81</td><td class="col-num" data-field="Growth 2026" data-val="1.9">1.90</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.18">1.18</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Switzerland">Switzerland</td><td class="col-num" data-field="GDP Nominal" data-val="1044">1.04T</td><td class="col-num" data-field="GDP PPP" data-val="921">921</td><td class="col-num col-dim" data-field="Population" data-val="9.0">9.0</td><td class="col-num" data-field="GDP/cap Nom" data-val="115620">$115,620</td><td class="col-num" data-field="GDP/cap PPP" data-val="102096">$102,096</td><td class="col-num" data-field="Growth 2025" data-val="1.27">1.27</td><td class="col-num" data-field="Growth 2026" data-val="1.13">1.13</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="0.88">0.88</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="Türkiye">Türkiye</td><td class="col-num" data-field="GDP Nominal" data-val="1597">1.60T</td><td class="col-num" data-field="GDP PPP" data-val="3786">3.79T</td><td class="col-num col-dim" data-field="Population" data-val="85.8">85.8</td><td class="col-num" data-field="GDP/cap Nom" data-val="18611">$18,611</td><td class="col-num" data-field="GDP/cap PPP" data-val="44110">$44,110</td><td class="col-num" data-field="Growth 2025" data-val="3.6">3.60</td><td class="col-num" data-field="Growth 2026" data-val="3.07">3.07</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="2.37">2.37</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="United Kingdom">United Kingdom</td><td class="col-num" data-field="GDP Nominal" data-val="4003">4.00T</td><td class="col-num" data-field="GDP PPP" data-val="4553">4.55T</td><td class="col-num col-dim" data-field="Population" data-val="69.5">69.5</td><td class="col-num" data-field="GDP/cap Nom" data-val="57608">$57,608</td><td class="col-num" data-field="GDP/cap PPP" data-val="65525">$65,525</td><td class="col-num" data-field="Growth 2025" data-val="1.38">1.38</td><td class="col-num" data-field="Growth 2026" data-val="0.86">0.86</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.14">1.14</td></tr>
+<tr><td class="col-name" data-field="Country" data-val="United States">United States</td><td class="col-num" data-field="GDP Nominal" data-val="30767">30.77T</td><td class="col-num" data-field="GDP PPP" data-val="30767">30.77T</td><td class="col-num col-dim" data-field="Population" data-val="341.9">341.9</td><td class="col-num" data-field="GDP/cap Nom" data-val="89991">$89,991</td><td class="col-num" data-field="GDP/cap PPP" data-val="89991">$89,991</td><td class="col-num" data-field="Growth 2025" data-val="2.11">2.11</td><td class="col-num" data-field="Growth 2026" data-val="1.95">1.95</td><td class="col-num" data-field="PPP/Nom. Ratio" data-val="1.0">1.00</td></tr>
+    </tbody>
+  </table>
+  <div class="legend-bar">
+    <span class="legend-label">Lower</span>
+    <div class="legend-gradient"></div>
+    <span class="legend-label">Higher</span>
+  </div>
   </div>
 
-  <!-- Bar chart: GDP per capita PPP -->
   <div class="card chart-section">
     <h2>GDP per Capita (PPP) — Bar Chart</h2>
     <div class="chart-container">
@@ -154,19 +227,26 @@
   <div class="sources">
     <h3>Data Sources</h3>
     <ul>
-      <li><strong>IMF World Economic Outlook</strong> (October 2025) — GDP, GDP per capita (nominal & PPP), population, growth rate.<br>
+      <li><strong>IMF World Economic Outlook Database</strong> (April 2026) — nominal &amp; PPP GDP levels, GDP per capita, population (2025 values; 2026 projections).<br>
         <a href="https://www.imf.org/en/Publications/WEO" target="_blank">imf.org/WEO</a></li>
-      <li><strong>OECD Economic Outlook No. 118</strong> (December 2025) — GDP growth rate forecasts 2025–2026.<br>
-        <a href="https://www.oecd.org/en/publications/oecd-economic-outlook_16097408.html" target="_blank">oecd.org/economic-outlook</a></li>
+      <li><strong>OECD Economic Outlook, Volume 2026 Issue 1 (No. 119)</strong> (June 2026) — real GDP growth estimates for 2025 and projections for 2026, all OECD members.<br>
+        <a href="https://www.oecd.org/en/publications/2026/06/oecd-economic-outlook-volume-2026-issue-1_8be0dba6.html" target="_blank">oecd.org/economic-outlook</a></li>
       <li><strong>World Bank Open Data</strong> — cross-referenced for validation.<br>
         <a href="https://data.worldbank.org/" target="_blank">data.worldbank.org</a></li>
     </ul>
     <div class="note">
       <strong>Note:</strong> GDP (nominal) is in current US dollars. GDP (PPP) is in current international dollars, adjusting for
-      purchasing power differences. Population is mid-year 2025 estimate. Growth rate is real GDP % change y/y (2025 estimate).
-      Ireland and Luxembourg show very high GDP per capita due to multinational corporations' profits being counted domestically.
+      purchasing power differences. Population is the 2025 estimate. Growth rate is real GDP % change y/y — 2025 estimate and 2026
+      projection from the OECD Economic Outlook No. 119 (June 2026, "time-limited disruption" scenario amid the Middle East energy shock).
+      Ireland and Luxembourg show very high GDP per capita due to multinational corporations' profits being counted domestically;
+      Ireland's 2025 growth (12.4%) also reflects multinational-driven flows, with an offsetting pullback projected for 2026.
     </div>
   </div>
+
+  <div class="footer">
+  <p>OECD GDP Report v2.0.0 &copy; 2026 Dan Micsa, PhD (dmicsa@gmail.com)</p>
+  <p>Data vintage: IMF WEO April 2026 &middot; OECD EO119 June 2026</p>
+  <p>Generated on 2026-09-10</p>
 </div>
 
 <div class="tooltip-chart" id="tooltip">
@@ -175,163 +255,47 @@
 </div>
 
 <script>
-// ─── COLUMN DEFINITIONS ───────────────────────────────────────────────
-const columns = [
-  {key:"name",      label:"Country",         unit:"",     fmt:s=>s, higherBetter:null, sortable:false},
-  {key:"gdpNom",    label:"GDP Nominal",     unit:"$B",   fmt:v=>v>=1000?(v/1000).toFixed(2)+"T":v.toFixed(0), higherBetter:true},
-  {key:"gdpPPP",    label:"GDP PPP",         unit:"$B",   fmt:v=>v>=1000?(v/1000).toFixed(2)+"T":v.toFixed(0), higherBetter:true},
-  {key:"pop",       label:"Population",      unit:"M",    fmt:v=>v.toFixed(1), higherBetter:null},
-  {key:"pcNom",     label:"GDP/cap Nom.",    unit:"$",    fmt:v=>"$"+Math.round(v).toLocaleString(), higherBetter:true},
-  {key:"pcPPP",     label:"GDP/cap PPP",     unit:"$",    fmt:v=>"$"+Math.round(v).toLocaleString(), higherBetter:true},
-  {key:"growth25",  label:"Growth 2025",     unit:"%",    fmt:v=>v.toFixed(1)+"%", higherBetter:true},
-  {key:"growth26",  label:"Growth 2026",     unit:"%",    fmt:v=>v.toFixed(1)+"%", higherBetter:true},
-  {key:"pppRatio",  label:"PPP/Nom. Ratio",  unit:"",     fmt:v=>v.toFixed(2), higherBetter:null},
-];
-
-// ─── DATA ─────────────────────────────────────────────────────────────
-// IMF WEO October 2025, OECD Economic Outlook December 2025
-// GDP nom/PPP in billions USD/int$, pop in millions, pcNom/pcPPP in USD/int$ per person
+// ─── DATA (chart source, mirrors summaryTable) ────────────────────────
 const data = [
-  //                      nom$B   ppp$B   popM    pcNom   pcPPP   g25  g26
-  {name:"Australia",      gdpNom:1824, gdpPPP:1810, pop:26.7, pcNom:69360, pcPPP:73360, growth25:1.9, growth26:2.3},
-  {name:"Austria",        gdpNom:590,  gdpPPP:689,  pop:9.2,  pcNom:65640, pcPPP:76590, growth25:0.8, growth26:1.3},
-  {name:"Belgium",        gdpNom:743,  gdpPPP:907,  pop:11.7, pcNom:63900, pcPPP:77700, growth25:1.0, growth26:1.2},
-  {name:"Canada",         gdpNom:2284, gdpPPP:2653, pop:40.1, pcNom:58240, pcPPP:67710, growth25:1.5, growth26:1.0},
-  {name:"Chile",          gdpNom:358,  gdpPPP:720,  pop:19.8, pcNom:17880, pcPPP:36430, growth25:2.3, growth26:2.2},
-  {name:"Colombia",       gdpNom:450,  gdpPPP:1195, pop:52.3, pcNom:8640,  pcPPP:23160, growth25:2.7, growth26:2.9},
-  {name:"Costa Rica",     gdpNom:107,  gdpPPP:175,  pop:5.3,  pcNom:20130, pcPPP:32830, growth25:3.8, growth26:3.5},
-  {name:"Czech Republic", gdpNom:336,  gdpPPP:682,  pop:10.9, pcNom:38370, pcPPP:62340, growth25:2.1, growth26:2.5},
-  {name:"Denmark",        gdpNom:484,  gdpPPP:518,  pop:5.9,  pcNom:82710, pcPPP:87540, growth25:2.1, growth26:1.8},
-  {name:"Estonia",        gdpNom:43,   gdpPPP:76,   pop:1.4,  pcNom:31820, pcPPP:55270, growth25:1.8, growth26:2.8},
-  {name:"Finland",        gdpNom:307,  gdpPPP:377,  pop:5.6,  pcNom:55400, pcPPP:67610, growth25:0.8, growth26:1.5},
-  {name:"France",         gdpNom:3362, gdpPPP:4710, pop:68.3, pcNom:49250, pcPPP:69450, growth25:0.9, growth26:1.0},
-  {name:"Germany",        gdpNom:5014, gdpPPP:5870, pop:83.8, pcNom:59830, pcPPP:78570, growth25:0.3, growth26:0.8},
-  {name:"Greece",         gdpNom:249,  gdpPPP:467,  pop:10.3, pcNom:24120, pcPPP:44790, growth25:2.1, growth26:2.0},
-  {name:"Hungary",        gdpNom:215,  gdpPPP:523,  pop:9.6,  pcNom:22470, pcPPP:52900, growth25:1.8, growth26:2.8},
-  {name:"Iceland",        gdpNom:32,   gdpPPP:31,   pop:0.4,  pcNom:82230, pcPPP:82230, growth25:2.0, growth26:2.3},
-  {name:"Ireland",        gdpNom:555,  gdpPPP:710,  pop:5.3,  pcNom:106340,pcPPP:141120,growth25:3.5, growth26:3.2},
-  {name:"Israel",         gdpNom:564,  gdpPPP:668,  pop:10.0, pcNom:56730, pcPPP:69570, growth25:3.4, growth26:3.8},
-  {name:"Italy",          gdpNom:2544, gdpPPP:3390, pop:58.8, pcNom:43270, pcPPP:57010, growth25:0.9, growth26:0.9},
-  {name:"Japan",          gdpNom:4280, gdpPPP:7105, pop:123.3,pcNom:34710, pcPPP:56440, growth25:1.3, growth26:0.5},
-  {name:"Korea",          gdpNom:1868, gdpPPP:3480, pop:51.7, pcNom:36150, pcPPP:67550, growth25:1.2, growth26:1.8},
-  {name:"Latvia",         gdpNom:52,   gdpPPP:82,   pop:1.8,  pcNom:27960, pcPPP:44980, growth25:2.4, growth26:2.8},
-  {name:"Lithuania",      gdpNom:84,   gdpPPP:156,  pop:2.9,  pcNom:29640, pcPPP:55590, growth25:2.5, growth26:2.8},
-  {name:"Luxembourg",     gdpNom:96,   gdpPPP:103,  pop:0.7,  pcNom:142860,pcPPP:157690,growth25:1.8, growth26:2.2},
-  {name:"Mexico",         gdpNom:1850, gdpPPP:3270, pop:131.0,pcNom:14120, pcPPP:25270, growth25:0.4, growth26:1.2},
-  {name:"Netherlands",    gdpNom:1220, gdpPPP:1435, pop:17.8, pcNom:68540, pcPPP:79270, growth25:1.4, growth26:1.3},
-  {name:"New Zealand",    gdpNom:263,  gdpPPP:315,  pop:5.3,  pcNom:49310, pcPPP:62110, growth25:1.3, growth26:2.1},
-  {name:"Norway",         gdpNom:526,  gdpPPP:477,  pop:5.6,  pcNom:94330, pcPPP:85950, growth25:1.7, growth26:1.5},
-  {name:"Poland",         gdpNom:842,  gdpPPP:1950, pop:37.6, pcNom:22400, pcPPP:50670, growth25:3.5, growth26:3.4},
-  {name:"Portugal",       gdpNom:298,  gdpPPP:500,  pop:10.3, pcNom:28940, pcPPP:48010, growth25:2.2, growth26:2.0},
-  {name:"Slovak Republic",gdpNom:135,  gdpPPP:266,  pop:5.4,  pcNom:24860, pcPPP:49040, growth25:2.3, growth26:2.5},
-  {name:"Slovenia",       gdpNom:74,   gdpPPP:116,  pop:2.1,  pcNom:34850, pcPPP:53230, growth25:2.5, growth26:2.3},
-  {name:"Spain",          gdpNom:1870, gdpPPP:2430, pop:48.1, pcNom:38880, pcPPP:50750, growth25:2.8, growth26:2.2},
-  {name:"Sweden",         gdpNom:657,  gdpPPP:757,  pop:10.6, pcNom:62080, pcPPP:72130, growth25:1.9, growth26:2.2},
-  {name:"Switzerland",    gdpNom:912,  gdpPPP:873,  pop:9.0,  pcNom:101330,pcPPP:97940, growth25:1.3, growth26:1.5},
-  {name:"Türkiye",        gdpNom:1297, gdpPPP:3790, pop:86.3, pcNom:15030, pcPPP:43590, growth25:3.0, growth26:3.1},
-  {name:"United Kingdom", gdpNom:3959, gdpPPP:4540, pop:68.3, pcNom:57980, pcPPP:65220, growth25:1.4, growth26:1.0},
-  {name:"United States",  gdpNom:29800,gdpPPP:29800,pop:340.0,pcNom:87650, pcPPP:89200, growth25:2.0, growth26:1.5},
+  {name:"Australia", gdpNom:1840, pop:27.7, pcNom:66352, pcPPP:72132, growth25:1.99, growth26:1.95},
+  {name:"Austria", gdpNom:580, pop:9.2, pcNom:63161, pcPPP:75825, growth25:0.62, growth26:0.73},
+  {name:"Belgium", gdpNom:725, pop:11.9, pcNom:61002, pcPPP:76208, growth25:0.98, growth26:0.71},
+  {name:"Canada", gdpNom:2320, pop:41.6, pcNom:55765, pcPPP:67013, growth25:1.74, growth26:1.16},
+  {name:"Chile", gdpNom:355, pop:20.0, pcNom:17735, pcPPP:35649, growth25:2.6, growth26:1.65},
+  {name:"Colombia", gdpNom:457, pop:53.0, pcNom:8623, pcPPP:22543, growth25:2.57, growth26:2.4},
+  {name:"Costa Rica", gdpNom:103, pop:5.4, pcNom:19162, pcPPP:32335, growth25:4.56, growth26:3.47},
+  {name:"Czech Republic", gdpNom:389, pop:10.9, pcNom:35678, pcPPP:60247, growth25:2.65, growth26:1.85},
+  {name:"Denmark", gdpNom:462, pop:6.0, pcNom:77046, pcPPP:86094, growth25:2.93, growth26:2.55},
+  {name:"Estonia", gdpNom:47, pop:1.4, pcNom:34325, pcPPP:49492, growth25:0.52, growth26:1.82},
+  {name:"Finland", gdpNom:317, pop:5.6, pcNom:56464, pcPPP:66297, growth25:0.17, growth26:0.83},
+  {name:"France", gdpNom:3369, pop:68.9, pcNom:48930, pcPPP:66276, growth25:0.94, growth26:0.65},
+  {name:"Germany", gdpNom:5048, pop:83.5, pcNom:60439, pcPPP:74004, growth25:0.34, growth26:0.66},
+  {name:"Greece", gdpNom:280, pop:10.4, pcNom:27041, pcPPP:44981, growth25:2.07, growth26:1.88},
+  {name:"Hungary", gdpNom:247, pop:9.6, pcNom:25826, pcPPP:48239, growth25:0.51, growth26:1.55},
+  {name:"Iceland", gdpNom:39, pop:0.4, pcNom:99071, pcPPP:80662, growth25:1.28, growth26:1.59},
+  {name:"Ireland", gdpNom:718, pop:5.5, pcNom:130652, pcPPP:152632, growth25:12.39, growth26:-1.04},
+  {name:"Israel", gdpNom:611, pop:10.1, pcNom:60335, pcPPP:56528, growth25:2.93, growth26:3.3},
+  {name:"Italy", gdpNom:2550, pop:58.9, pcNom:43270, pcPPP:63538, growth25:0.54, growth26:0.53},
+  {name:"Japan", gdpNom:4435, pop:123.3, pcNom:35973, pcPPP:56854, growth25:1.05, growth26:0.61},
+  {name:"Korea", gdpNom:1872, pop:51.7, pcNom:36227, pcPPP:65405, growth25:0.96, growth26:2.63},
+  {name:"Latvia", gdpNom:49, pop:1.9, pcNom:26116, pcPPP:43509, growth25:2.14, growth26:1.89},
+  {name:"Lithuania", gdpNom:95, pop:2.9, pcNom:32839, pcPPP:57818, growth25:2.92, growth26:2.84},
+  {name:"Luxembourg", gdpNom:101, pop:0.7, pcNom:148247, pcPPP:152966, growth25:0.62, growth26:0.73},
+  {name:"Mexico", gdpNom:1833, pop:133.4, pcNom:13741, pcPPP:25682, growth25:0.79, growth26:0.81},
+  {name:"Netherlands", gdpNom:1332, pop:18.0, pcNom:73833, pcPPP:84738, growth25:1.79, growth26:0.98},
+  {name:"New Zealand", gdpNom:259, pop:5.3, pcNom:48621, pcPPP:55840, growth25:0.46, growth26:1.41},
+  {name:"Norway", gdpNom:531, pop:5.6, pcNom:94468, pcPPP:111545, growth25:1.09, growth26:1.31},
+  {name:"Poland", gdpNom:1036, pop:36.5, pcNom:28374, pcPPP:55793, growth25:3.63, growth26:3.04},
+  {name:"Portugal", gdpNom:346, pop:10.8, pcNom:32166, pcPPP:50269, growth25:1.86, growth26:1.76},
+  {name:"Slovak Republic", gdpNom:154, pop:5.4, pcNom:28498, pcPPP:47684, growth25:0.81, growth26:0.71},
+  {name:"Slovenia", gdpNom:80, pop:2.1, pcNom:37357, pcPPP:57922, growth25:1.06, growth26:1.93},
+  {name:"Spain", gdpNom:1904, pop:49.7, pcNom:38290, pcPPP:57034, growth25:2.83, growth26:2.19},
+  {name:"Sweden", gdpNom:669, pop:10.7, pcNom:62662, pcPPP:74081, growth25:1.81, growth26:1.9},
+  {name:"Switzerland", gdpNom:1044, pop:9.0, pcNom:115620, pcPPP:102096, growth25:1.27, growth26:1.13},
+  {name:"Türkiye", gdpNom:1597, pop:85.8, pcNom:18611, pcPPP:44110, growth25:3.6, growth26:3.07},
+  {name:"United Kingdom", gdpNom:4003, pop:69.5, pcNom:57608, pcPPP:65525, growth25:1.38, growth26:0.86},
+  {name:"United States", gdpNom:30767, pop:341.9, pcNom:89991, pcPPP:89991, growth25:2.11, growth26:1.95},
 ];
-
-// Compute PPP/Nominal ratio
-data.forEach(d => { d.pppRatio = d.pcPPP / d.pcNom; });
-
-// ─── RG PALETTE (OKLCH) ──────────────────────────────────────────────
-function scoreToColor(val, min, max) {
-  if (max === min) return "var(--fg-dim)";
-  let t = (val - min) / (max - min);
-  t = Math.max(0, Math.min(1, t));
-  let L, C, hue;
-  if (t <= 0.5) {
-    const s = t * 2;
-    L   = 0.50 + s * (0.97 - 0.50);
-    C   = 0.20 + s * (0.02 - 0.20);
-    hue = 25   + s * (95   - 25);
-  } else {
-    const s = (t - 0.5) * 2;
-    L   = 0.97 + s * (0.50 - 0.97);
-    C   = 0.02 + s * (0.20 - 0.02);
-    hue = 95   + s * (143  - 95);
-  }
-  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${hue.toFixed(1)})`;
-}
-
-// ─── TABLE RENDER ─────────────────────────────────────────────────────
-let sortCol = "pcPPP";
-let sortAsc = false;
-
-function getRange(key) {
-  const vals = data.map(d => d[key]).filter(v => typeof v === 'number' && isFinite(v));
-  return { min: Math.min(...vals), max: Math.max(...vals) };
-}
-
-function renderHeaders() {
-  const row = document.getElementById("headerRow");
-  row.innerHTML = "";
-  columns.forEach(col => {
-    const th = document.createElement("th");
-    const isSorted = sortCol === col.key;
-    th.className = isSorted ? "sorted" : "";
-    const arrow = (col.sortable === false) ? "" :
-      `<span class="arrow">${isSorted ? (sortAsc ? "▲" : "▼") : "⇅"}</span>`;
-    th.innerHTML = `${col.label}${col.unit ? " <small>("+col.unit+")</small>" : ""} ${arrow}`;
-    if (col.sortable !== false) {
-      th.onclick = () => {
-        if (sortCol === col.key) sortAsc = !sortAsc;
-        else { sortCol = col.key; sortAsc = col.higherBetter === false; }
-        renderTable();
-      };
-    }
-    row.appendChild(th);
-  });
-}
-
-function renderTable() {
-  renderHeaders();
-  const sorted = [...data].sort((a, b) => {
-    const va = a[sortCol], vb = b[sortCol];
-    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-    return sortAsc ? va - vb : vb - va;
-  });
-
-  const tbody = document.getElementById("tableBody");
-  tbody.innerHTML = "";
-
-  sorted.forEach(d => {
-    const tr = document.createElement("tr");
-    columns.forEach(col => {
-      const td = document.createElement("td");
-      const val = d[col.key];
-      if (col.key === "name") {
-        td.textContent = val;
-      } else {
-        td.textContent = col.fmt(val);
-        const range = getRange(col.key);
-        if (col.key === "pppRatio") {
-          // Higher ratio = more purchasing power vs nominal → greenish
-          td.style.color = scoreToColor(val, range.min, range.max);
-        } else if (col.key === "pop") {
-          // Population is neutral — just dim
-          td.style.color = "var(--fg-dim)";
-        } else if (col.higherBetter === true) {
-          td.style.color = scoreToColor(val, range.min, range.max);
-        } else if (col.higherBetter === false) {
-          td.style.color = scoreToColor(val, range.max, range.min);
-        } else {
-          td.style.color = "var(--fg-dim)";
-        }
-        td.style.fontWeight = "600";
-        if (col.key === "pcPPP") {
-          td.className = "score-cell";
-        }
-      }
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-}
-
-renderTable();
 
 // ─── BAR CHART: GDP per Capita PPP ───────────────────────────────────
 const tooltip = document.getElementById("tooltip");
@@ -364,17 +328,17 @@ function renderBarChart() {
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("x1", margin.left); line.setAttribute("x2", totalW - margin.right);
     line.setAttribute("y1", y); line.setAttribute("y2", y);
-    line.setAttribute("stroke", v === 0 ? "#8b90a0" : "#2a2e3a");
-    line.setAttribute("stroke-width", v === 0 ? 1.5 : 0.5);
+    line.setAttribute("style", v === 0
+      ? "stroke: var(--chart-axis, var(--fg-color)); stroke-width: 1.5"
+      : "stroke: var(--chart-grid, var(--fg-color)); stroke-width: 0.5; opacity: 0.5");
     svg.appendChild(line);
 
     const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
     label.setAttribute("x", margin.left - 6);
     label.setAttribute("y", y + 4);
     label.setAttribute("text-anchor", "end");
-    label.setAttribute("fill", "#8b90a0");
+    label.setAttribute("style", "fill: var(--chart-axis, var(--fg-color)); opacity: 0.8");
     label.setAttribute("font-size", "9");
-    label.setAttribute("font-family", "Inter, sans-serif");
     label.textContent = "$" + (v/1000) + "k";
     svg.appendChild(label);
   }
@@ -385,6 +349,9 @@ function renderBarChart() {
     const x = cx - barW / 2;
     const barY = yScale(d.pcPPP);
     const barH = yScale(0) - barY;
+    const barColor = typeof getPaletteColor === "function"
+      ? getPaletteColor(d.pcPPP, 20000, 100000)
+      : "var(--accent, var(--fg-color))";
 
     const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     rect.setAttribute("class", "bar-rect");
@@ -393,7 +360,7 @@ function renderBarChart() {
     rect.setAttribute("width", barW);
     rect.setAttribute("height", Math.max(barH, 1));
     rect.setAttribute("rx", 2);
-    rect.setAttribute("fill", scoreToColor(d.pcPPP, 20000, 100000));
+    rect.setAttribute("fill", barColor);
     svg.appendChild(rect);
 
     // Value label
@@ -401,10 +368,9 @@ function renderBarChart() {
     valText.setAttribute("x", cx);
     valText.setAttribute("y", barY - 4);
     valText.setAttribute("text-anchor", "middle");
-    valText.setAttribute("fill", scoreToColor(d.pcPPP, 20000, 100000));
+    valText.setAttribute("style", "fill: " + barColor);
     valText.setAttribute("font-size", "7");
     valText.setAttribute("font-weight", "600");
-    valText.setAttribute("font-family", "Inter, sans-serif");
     valText.textContent = Math.round(d.pcPPP / 1000) + "k";
     svg.appendChild(valText);
 
@@ -412,20 +378,19 @@ function renderBarChart() {
     const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
     lbl.setAttribute("transform", `translate(${cx}, ${margin.top + plotH + 10}) rotate(55)`);
     lbl.setAttribute("text-anchor", "start");
-    lbl.setAttribute("fill", "#8b90a0");
+    lbl.setAttribute("style", "fill: var(--chart-axis, var(--fg-color)); opacity: 0.8");
     lbl.setAttribute("font-size", "8.5");
     lbl.setAttribute("font-weight", "600");
-    lbl.setAttribute("font-family", "Inter, sans-serif");
     lbl.textContent = d.name;
     svg.appendChild(lbl);
 
     // Tooltip
     rect.addEventListener("mouseenter", () => {
       ttName.textContent = d.name;
-      ttVals.innerHTML = `GDP/cap PPP: <span style="color:${scoreToColor(d.pcPPP,20000,100000)}">$${Math.round(d.pcPPP).toLocaleString()}</span><br>` +
-        `GDP/cap Nom: $${Math.round(d.pcNom).toLocaleString()}<br>` +
-        `GDP Nominal: $${d.gdpNom >= 1000 ? (d.gdpNom/1000).toFixed(2)+"T" : d.gdpNom+"B"}<br>` +
-        `Pop: ${d.pop.toFixed(1)}M · Growth: ${d.growth25.toFixed(1)}%`;
+      ttVals.innerHTML = `GDP/cap PPP: <span style="color:${barColor}">$${d.pcPPP.toLocaleString()}</span><br>` +
+        `GDP/cap Nom: $${d.pcNom.toLocaleString()}<br>` +
+        `GDP Nominal: ${d.gdpNom >= 1000 ? (d.gdpNom/1000).toFixed(2)+"T" : d.gdpNom+"B"}<br>` +
+        `Pop: ${d.pop.toFixed(1)}M · Growth 2025: ${d.growth25.toFixed(2)}% · 2026: ${d.growth26.toFixed(2)}%`;
       tooltip.style.display = "block";
     });
     rect.addEventListener("mousemove", (e) => {
@@ -437,6 +402,82 @@ function renderBarChart() {
 }
 
 renderBarChart();
+</script>
+
+<script>
+function updateTableColors() {
+    const table = document.getElementById('summaryTable');
+    if (!table) return;
+
+    const cells = table.querySelectorAll('tbody td[data-field][data-val]');
+    cells.forEach(cell => {
+        const field = cell.getAttribute('data-field');
+        const rawVal = parseFloat(cell.getAttribute('data-val'));
+        if (!field || Number.isNaN(rawVal)) return;
+
+        let min = 0.0;
+        let max = 1.0;
+        let reverse = false;
+        let colorValue = rawVal;
+        let usePalette = false;
+
+        if (field === 'GDP Nominal') {
+            usePalette = true;
+            colorValue = Math.max(100, Math.min(30000, rawVal));
+            min = 100;
+            max = 30000;
+        } else if (field === 'GDP PPP') {
+            usePalette = true;
+            colorValue = Math.max(100, Math.min(7000, rawVal));
+            min = 100;
+            max = 7000;
+        } else if (field === 'GDP/cap Nom') {
+            usePalette = true;
+            colorValue = Math.max(8000, Math.min(120000, rawVal));
+            min = 8000;
+            max = 120000;
+        } else if (field === 'GDP/cap PPP') {
+            usePalette = true;
+            colorValue = Math.max(20000, Math.min(100000, rawVal));
+            min = 20000;
+            max = 100000;
+        } else if (field === 'Growth 2025' || field === 'Growth 2026') {
+            usePalette = true;
+            colorValue = Math.max(-2.0, Math.min(5.0, rawVal));
+            min = -2.0;
+            max = 5.0;
+        } else if (field === 'PPP/Nom. Ratio') {
+            usePalette = true;
+            colorValue = Math.max(0.8, Math.min(3.0, rawVal));
+            min = 0.8;
+            max = 3.0;
+        }
+
+        if (usePalette && typeof getPaletteColor === 'function' && typeof applyBackgroundWithContrast === 'function') {
+            const rgb = getPaletteColor(colorValue, min, max, reverse);
+            applyBackgroundWithContrast(cell, rgb);
+        }
+    });
+}
+
+(function() {
+    const previousSetPalette = window.setPalette;
+    if (typeof previousSetPalette === 'function') {
+        window.setPalette = function(name) {
+            previousSetPalette(name);
+            updateTableColors();
+            if (typeof renderBarChart === 'function') renderBarChart();
+        };
+    }
+
+    const previousRenderTable = window.renderTable;
+    window.renderTable = function() {
+        if (typeof previousRenderTable === 'function') {
+            previousRenderTable();
+        }
+        updateTableColors();
+    };
+})();
 </script>
 </body>
 </html>

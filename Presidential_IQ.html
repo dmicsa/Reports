@@ -1,232 +1,355 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Estimated IQ of US Presidents</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:      #0f1117;
-    --surface: #181b24;
-    --border:  #2a2e3a;
-    --fg:      #e4e6ed;
-    --fg-dim:  #8b90a0;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: var(--bg); color: var(--fg);
-    min-height: 100vh; padding: 2rem;
-  }
-  .container { max-width: 1100px; margin: 0 auto; }
+  <meta charset="UTF-8">
+	<meta name="darkreader-lock">
+  <title>Estimated IQ of US Presidents</title>
+  <link rel="stylesheet" href="https://dmicsa.github.io/HTMLAssets/Theme.css">
+  <style>
+    body { background-color: var(--bg-color); color: var(--fg-color); margin: 20px; transition: background-color 0.3s, color 0.3s; }
+    .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .chart-wrap { position: relative; width: 100%; }
+    .sources h3 { margin-top: 0; }
+    .sources ul { margin: 0; padding-left: 20px; }
+    .sources li { margin-bottom: 8px; line-height: 1.5; }
+    .sources .note { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); line-height: 1.6; }
+      /* Numeric columns 50% wider (Theme.css pins .col-num at 80px) */
+    .grid-table td.col-num, .grid-table th.col-num {
+      width: 120px !important;
+      min-width: 120px !important;
+      max-width: 120px !important;
+    }</style>
+  <script src="https://dmicsa.github.io/HTMLAssets/Standard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script>
+    let currentSortCol = -1;
+    let currentSortAsc = true;
 
-  header { text-align: center; margin-bottom: 2rem; }
-  header h1 {
-    font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
-    background: linear-gradient(135deg, #ffd700, #ff6b6b);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text; margin-bottom: .4rem;
-  }
-  header p { color: var(--fg-dim); font-size: .9rem; }
+    function setSortArrow(colIndex) {
+      const table = document.getElementById('summaryTable');
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      const ths = Array.from(table.querySelectorAll('thead th'));
+      const trs = Array.from(tbody.querySelectorAll('tr'));
 
-  .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 2rem; margin-bottom: 2rem;
-    position: relative; overflow: hidden;
-  }
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, #ffd700, #ff6b6b);
-  }
-  .card h1 {
-    font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--fg);
-  }
-  .chart-wrap { position: relative; width: 100%; }
+      if (currentSortCol === colIndex) {
+          currentSortAsc = !currentSortAsc;
+      } else {
+          currentSortCol = colIndex;
+          currentSortAsc = true;
+		  if (colIndex > 4) currentSortAsc = false;
+      }
 
-  .sources {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;
-  }
-  .sources h3 { font-size: .95rem; font-weight: 700; margin-bottom: .8rem; }
-  .sources ul { list-style: none; padding: 0; }
-  .sources li {
-    font-size: .8rem; color: var(--fg-dim); margin-bottom: .5rem;
-    padding-left: 1rem; position: relative; line-height: 1.5;
-  }
-  .sources li::before { content: '→'; position: absolute; left: 0; }
-  .sources a { color: #ffd700; text-decoration: none; }
-  .sources a:hover { text-decoration: underline; }
-  .sources .note {
-    font-size: .75rem; color: var(--fg-dim); margin-top: .8rem;
-    border-top: 1px solid var(--border); padding-top: .8rem; line-height: 1.6;
-  }
-</style>
+      ths.forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+      const th = ths[colIndex];
+      if (th) th.classList.add(currentSortAsc ? 'sort-asc' : 'sort-desc');
+
+      const ascMult = currentSortAsc ? 1 : -1;
+
+      trs.sort((a, b) => {
+          let cellA = a.children[colIndex];
+          let cellB = b.children[colIndex];
+          if (!cellA || !cellB) return 0;
+
+          let valA = cellA.getAttribute('data-val');
+          if (!valA) valA = cellA.innerText.trim();
+          let valB = cellB.getAttribute('data-val');
+          if (!valB) valB = cellB.innerText.trim();
+
+          let fA = parseFloat(valA);
+          let fB = parseFloat(valB);
+
+          if (!isNaN(fA) && !isNaN(fB)) return (fA - fB) * ascMult;
+          return valA.localeCompare(valB) * ascMult;
+      });
+
+      trs.forEach(tr => tbody.appendChild(tr));
+      if (typeof updateTableColors === 'function') updateTableColors();
+    }
+
+    const renderTable = updateTableColors;
+
+    document.addEventListener('DOMContentLoaded', () => {
+       initStandard();
+       setSortArrow(0);
+       refreshMetaChips(document);
+       updateTableColors();
+    });
+  </script>
 </head>
-<body>
-<div class="container">
-
-  <header>
+<body class="solarized-light">
+  <div class="report-header">
     <h1>Estimated IQ of US Presidents</h1>
-    <p>Historiometric estimates based on Simonton (2006), nominal USD</p>
-    <p style="margin-top:.3rem">©2026, Dan Micsa, PhD, Processed by Claude Opus 4.6</p>
-  </header>
+  <div class="controls-group">
+    <div class="palette-dropdown">
+      <input type="checkbox" id="palette-toggle">
+      <label for="palette-toggle" class="palette-button" id="palette-btn-label">
+        <span id="current-palette-name">Loading...</span>
+      </label>
+      <div class="palette-menu" id="palette-menu"></div>
+    </div>
+    <select id="themeSelect" onchange="setTheme(this.value)" title="Select Theme">
+      <option value="solarized-light" selected>Solarized Light</option>
+      <option value="dark">Dark</option>
+      <option value="kiwi-dark">Kiwi Dark</option>
+      <option value="kiwi-light">Kiwi Light</option>
+      <option value="light">Light</option>
+      <option value="mint-haze">Mint Haze</option>
+      <option value="mint-haze-dark">Mint Haze Dark</option>
+      <option value="oil">Oil</option>
+      <option value="petal-blush">Petal Blush</option>
+      <option value="petal-blush-dark">Petal Blush Dark</option>
+      <option value="rose-linen">Rose Linen</option>
+      <option value="rose-linen-dark">Rose Linen Dark</option>
+      <option value="rust-brown">Rust Brown</option>
+      <option value="sage-sea">Sage Sea</option>
+      <option value="sage-sea-dark">Sage Sea Dark</option>
+      <option value="warm-sand">Warm Sand</option>
+      <option value="warm-sand-dark">Warm Sand Dark</option>
+    </select>
+  </div>  </div>
 
   <div class="card">
-    <h1>Estimated IQ — Sorted Highest to Lowest</h1>
-    <div class="chart-wrap"><canvas id="iqChart"></canvas></div>
+    <h3>Estimated IQ &mdash; Sorted Highest to Lowest</h3>
+    <div class="chart-wrap" id="chartWrap"><canvas id="iqChart"></canvas></div>
   </div>
 
-  <div class="sources">
-    <h3>Data Sources</h3>
+  <div class="card">
+    <h3>Estimated IQ &mdash; Sortable Table</h3>
+    <table id="summaryTable" class="grid-table">
+      <thead>
+        <tr><th class="col-ix" onclick="setSortArrow(0)">Rank</th><th class="col-name" onclick="setSortArrow(1)">President</th><th class="col-meta" onclick="setSortArrow(2)">Party</th><th class="col-num" onclick="setSortArrow(3)">Estimated IQ</th></tr>
+      </thead>
+      <tbody id="summaryBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card sources">
+    <h3>Data Sources &amp; Notes</h3>
     <ul>
-      <li><strong>Primary:</strong> Simonton, D.K. (2006). "Presidential IQ, Openness, Intellectual Brilliance, and Leadership."
-        <em>Political Psychology</em>, 27(4), 511–526.<br>
+      <li><strong>Primary:</strong> Simonton, D.K. (2006). "Presidential IQ, Openness, Intellectual Brilliance, and Leadership: Estimates and Correlations for 42 U.S. Chief Executives."
+        <em>Political Psychology</em>, 27(4), 511&ndash;526.<br>
         <a href="https://doi.org/10.1111/j.1467-9221.2006.00524.x" target="_blank">https://doi.org/10.1111/j.1467-9221.2006.00524.x</a></li>
-      <li><strong>Summary table:</strong> Wikipedia — "Historical rankings of presidents of the United States"<br>
-        <a href="https://en.wikipedia.org/wiki/Historical_rankings_of_presidents_of_the_United_States" target="_blank">https://en.wikipedia.org/wiki/Historical_rankings_of_presidents</a></li>
+      <li><strong>Summary table:</strong> Wikipedia &mdash; "Historical rankings of presidents of the United States"<br>
+        <a href="https://en.wikipedia.org/wiki/Historical_rankings_of_presidents_of_the_United_States" target="_blank">https://en.wikipedia.org/wiki/Historical_rankings_of_presidents_of_the_United_States</a></li>
       <li><strong>Extended estimates for recent presidents:</strong> Various psychometric analyses and publicly available test records.<br>
         <a href="https://www.rd.com/list/president-iq/" target="_blank">https://www.rd.com/list/president-iq/</a></li>
+      <li><strong>Recent review (Feb 2025):</strong> 24/7 Wall St., "Who Was the Smartest American President?" &mdash; confirms Simonton (2006) remains the most recent comprehensive scholarly estimate set.<br>
+        <a href="https://247wallst.com/politics/2025/02/14/who-was-the-smartest-american-president/" target="_blank">https://247wallst.com/politics/2025/02/14/who-was-the-smartest-american-president/</a></li>
     </ul>
     <div class="note">
-      Estimates use Simonton's "corrected for reliability, ages 18–26" figures where available.
+      Estimates use Simonton's "corrected for reliability, ages 18&ndash;26" figures where available.
       These are historiometric <em>estimates</em>, not measured IQ scores. No formal IQ test results exist
       for most presidents. Modern presidents (Obama, Trump, Biden) are rough estimates based on
-      academic records, career complexity, and linguistic analysis — not from Simonton's original study.
+      academic records, career complexity, and linguistic analysis &mdash; not from Simonton's original study,
+      which covers only Washington through George W. Bush (42 chief executives).<br><br>
+      <strong>Roster status (as of September 2026):</strong> 45 individuals have served in 47 presidencies.
+      Donald Trump, the incumbent 47th president (second term since January 20, 2025), is already included
+      below; no new scholarly IQ estimate has been published for any post-Bush officeholder.
+      Party codes: DR = Democratic-Republican, D = Democratic, R = Republican, W = Whig, F = Federalist, I = Independent.
     </div>
   </div>
-</div>
+
+  <div class="footer">
+    <p>Presidential IQ Report v2.0 &copy; 2026 Dan Micsa, PhD (dmicsa@gmail.com)</p>
+    <p>Generated on 2026-09-10</p>
+  </div>
 
 <script>
-// ─── DATA ──────────────────────────────────────────────────────────────
-// Simonton 2006 "corrected" estimates where available; supplemented by
-// other scholarly and journalistic estimates for recent presidents.
 const presidents = [
   {name:"John Quincy Adams",    iq:169, party:"DR"},
   {name:"Thomas Jefferson",     iq:154, party:"DR"},
-  {name:"John F. Kennedy",     iq:151, party:"D"},
-  {name:"Bill Clinton",        iq:149, party:"D"},
-  {name:"Woodrow Wilson",      iq:145, party:"D"},
-  {name:"Jimmy Carter",        iq:145, party:"D"},
-  {name:"Theodore Roosevelt",  iq:142, party:"R"},
-  {name:"James Garfield",      iq:142, party:"R"},
-  {name:"John Adams",          iq:143, party:"F"},
-  {name:"Chester A. Arthur",   iq:142, party:"R"},
-  {name:"James Madison",       iq:141, party:"DR"},
-  {name:"Abraham Lincoln",     iq:140, party:"R"},
+  {name:"John F. Kennedy",      iq:151, party:"D"},
+  {name:"Bill Clinton",         iq:149, party:"D"},
+  {name:"Woodrow Wilson",       iq:145, party:"D"},
+  {name:"Jimmy Carter",         iq:145, party:"D"},
+  {name:"Theodore Roosevelt",   iq:142, party:"R"},
+  {name:"James Garfield",       iq:142, party:"R"},
+  {name:"Chester A. Arthur",    iq:142, party:"R"},
+  {name:"John Adams",           iq:143, party:"F"},
+  {name:"Richard Nixon",        iq:143, party:"R"},
+  {name:"James Madison",        iq:141, party:"DR"},
+  {name:"Abraham Lincoln",      iq:140, party:"R"},
   {name:"Franklin D. Roosevelt",iq:140, party:"D"},
-  {name:"Barack Obama",        iq:140, party:"D"},
-  {name:"Richard Nixon",       iq:143, party:"R"},
-  {name:"Rutherford B. Hayes", iq:139, party:"R"},
-  {name:"James K. Polk",       iq:139, party:"D"},
-  {name:"Grover Cleveland",    iq:138, party:"D"},
-  {name:"Millard Fillmore",    iq:136, party:"W"},
-  {name:"Benjamin Harrison",   iq:136, party:"R"},
-  {name:"William H. Taft",     iq:140, party:"R"},
-  {name:"Dwight D. Eisenhower",iq:136, party:"R"},
-  {name:"Herbert Hoover",      iq:138, party:"R"},
-  {name:"George H.W. Bush",    iq:139, party:"R"},
-  {name:"Martin Van Buren",    iq:133, party:"D"},
-  {name:"William McKinley",    iq:133, party:"R"},
-  {name:"Franklin Pierce",     iq:133, party:"D"},
-  {name:"Harry S. Truman",     iq:132, party:"D"},
-  {name:"Zachary Taylor",      iq:131, party:"W"},
-  {name:"George Washington",   iq:132, party:"I"},
-  {name:"Calvin Coolidge",     iq:132, party:"R"},
-  {name:"Lyndon B. Johnson",   iq:131, party:"D"},
-  {name:"Ronald Reagan",       iq:130, party:"R"},
+  {name:"Barack Obama",         iq:140, party:"D"},
+  {name:"William H. Taft",      iq:140, party:"R"},
+  {name:"Rutherford B. Hayes",  iq:139, party:"R"},
+  {name:"James K. Polk",        iq:139, party:"D"},
+  {name:"George H.W. Bush",     iq:139, party:"R"},
+  {name:"Grover Cleveland",     iq:138, party:"D"},
+  {name:"Herbert Hoover",       iq:138, party:"R"},
+  {name:"Millard Fillmore",     iq:136, party:"W"},
+  {name:"Benjamin Harrison",    iq:136, party:"R"},
+  {name:"Dwight D. Eisenhower", iq:136, party:"R"},
+  {name:"Martin Van Buren",     iq:133, party:"D"},
+  {name:"William McKinley",     iq:133, party:"R"},
+  {name:"Franklin Pierce",      iq:133, party:"D"},
+  {name:"Harry S. Truman",      iq:132, party:"D"},
+  {name:"George Washington",    iq:132, party:"I"},
+  {name:"Calvin Coolidge",      iq:132, party:"R"},
+  {name:"Zachary Taylor",       iq:131, party:"W"},
+  {name:"Lyndon B. Johnson",    iq:131, party:"D"},
+  {name:"Ronald Reagan",        iq:130, party:"R"},
   {name:"William Henry Harrison",iq:130, party:"W"},
-  {name:"John Tyler",          iq:130, party:"W"},
-  {name:"Donald Trump",        iq:130, party:"R"},
-  {name:"Joe Biden",           iq:130, party:"D"},
-  {name:"James Buchanan",      iq:129, party:"D"},
-  {name:"Andrew Jackson",      iq:130, party:"D"},
-  {name:"James Monroe",        iq:124, party:"DR"},
-  {name:"Warren G. Harding",   iq:124, party:"R"},
-  {name:"George W. Bush",      iq:125, party:"R"},
-  {name:"Ulysses S. Grant",    iq:120, party:"R"},
-  {name:"Andrew Johnson",      iq:126, party:"D"},
+  {name:"John Tyler",           iq:130, party:"W"},
+  {name:"Donald Trump",         iq:130, party:"R"},
+  {name:"Joe Biden",            iq:130, party:"D"},
+  {name:"Andrew Jackson",       iq:130, party:"D"},
+  {name:"James Buchanan",       iq:129, party:"D"},
+  {name:"Andrew Johnson",       iq:126, party:"D"},
+  {name:"George W. Bush",       iq:125, party:"R"},
+  {name:"James Monroe",         iq:124, party:"DR"},
+  {name:"Warren G. Harding",    iq:124, party:"R"},
+  {name:"Ulysses S. Grant",     iq:120, party:"R"}
 ].sort((a,b) => b.iq - a.iq);
 
-const labels = presidents.map(p => p.name);
-const values = presidents.map(p => p.iq);
+(function buildTable() {
+  const tbody = document.getElementById('summaryBody');
+  presidents.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td class="col-ix" data-field="Rank" data-val="${i+1}">${i+1}</td>` +
+      `<td class="col-name" data-field="President" data-val="${p.name}">${p.name}</td>` +
+      `<td class="col-meta" data-field="Party" data-val="${p.party}">${p.party}</td>` +
+      `<td class="col-num" data-field="Estimated IQ" data-val="${p.iq}">${p.iq}</td>`;
+    tbody.appendChild(tr);
+  });
+})();
 
-// Color by IQ range
-function barColor(iq) {
-  if (iq >= 150) return 'rgba(255,215,0,0.85)';   // gold
-  if (iq >= 140) return 'rgba(108,159,255,0.85)';  // blue
-  if (iq >= 130) return 'rgba(130,200,130,0.85)';  // green
-  return 'rgba(255,140,108,0.85)';                  // coral
+function updateTableColors() {
+  refreshChartTheme();
+  const table = document.getElementById('summaryTable');
+  if (!table) return;
+
+  const cells = table.querySelectorAll('tbody td[data-field][data-val]');
+  cells.forEach(cell => {
+    const field = cell.getAttribute('data-field');
+    const rawVal = parseFloat(cell.getAttribute('data-val'));
+    if (!field || Number.isNaN(rawVal)) return;
+
+    if (field === 'Estimated IQ') {
+      const rgb = getPaletteColor(rawVal, 120, 170, false);
+      applyBackgroundWithContrast(cell, rgb);
+    }
+  });
 }
-function borderColor(iq) {
+
+(function() {
+  const previousSetPalette = window.setPalette;
+  if (typeof previousSetPalette === 'function') {
+    window.setPalette = function(name) {
+      previousSetPalette(name);
+      updateTableColors();
+    };
+  }
+  const previousRenderTable = window.renderTable;
+  window.renderTable = function() {
+    if (typeof previousRenderTable === 'function') {
+      previousRenderTable();
+    }
+    updateTableColors();
+  };
+})();
+
+function themeVar(name) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim();
+}
+
+function barColor(iq) {
+  if (iq >= 150) return 'rgba(255,215,0,0.85)';
+  if (iq >= 140) return 'rgba(108,159,255,0.85)';
+  if (iq >= 130) return 'rgba(130,200,130,0.85)';
+  return 'rgba(255,140,108,0.85)';
+}
+function barBorderColor(iq) {
   if (iq >= 150) return '#ffd700';
   if (iq >= 140) return '#6c9fff';
   if (iq >= 130) return '#82c882';
   return '#ff8c6c';
 }
-const bgColors = values.map(barColor);
-const bdColors = values.map(borderColor);
 
-// Dynamic chart height: 28px per bar
-const chartHeight = presidents.length * 28 + 60;
-document.querySelector('.chart-wrap').style.height = chartHeight + 'px';
+let iqChart = null;
 
-// ─── CHART DEFAULTS ────────────────────────────────────────────────────
-Chart.defaults.color = '#8b90a0';
-Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
-Chart.defaults.font.size = 11;
+function refreshChartTheme() {
+  if (!iqChart) return;
+  const fg = themeVar('--fg-color');
+  const border = themeVar('--border-color');
+  const tableBg = themeVar('--table-bg');
+  Chart.defaults.color = fg;
+  const o = iqChart.options;
+  o.plugins.tooltip.backgroundColor = tableBg;
+  o.plugins.tooltip.borderColor = border;
+  o.plugins.tooltip.titleColor = fg;
+  o.plugins.tooltip.bodyColor = fg;
+  o.scales.x.grid.color = border;
+  o.scales.x.ticks.color = fg;
+  o.scales.x.title.color = fg;
+  o.scales.y.ticks.color = fg;
+  iqChart.update('none');
+}
 
-new Chart(document.getElementById('iqChart'), {
-  type: 'bar',
-  data: {
-    labels: labels,
-    datasets: [{
-      data: values,
-      backgroundColor: bgColors,
-      borderColor: bdColors,
-      borderWidth: 1,
-      borderRadius: 4,
-      borderSkipped: false,
-    }]
-  },
-  options: {
-    indexAxis: 'y',
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 1400, easing: 'easeOutQuart' },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1f2330',
-        borderColor: '#2a2e3a',
+document.addEventListener('DOMContentLoaded', () => {
+  const labels = presidents.map(p => p.name);
+  const values = presidents.map(p => p.iq);
+  const wrap = document.getElementById('chartWrap');
+  wrap.style.height = (presidents.length * 28 + 60) + 'px';
+
+  Chart.defaults.color = themeVar('--fg-color');
+  Chart.defaults.font.size = 11;
+
+  iqChart = new Chart(document.getElementById('iqChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: values.map(barColor),
+        borderColor: values.map(barBorderColor),
         borderWidth: 1,
-        callbacks: {
-          label: ctx => {
-            const p = presidents[ctx.dataIndex];
-            return `IQ ≈ ${p.iq}  (${p.party})`;
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 1400, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: themeVar('--table-bg'),
+          borderColor: themeVar('--border-color'),
+          borderWidth: 1,
+          titleColor: themeVar('--fg-color'),
+          bodyColor: themeVar('--fg-color'),
+          callbacks: {
+            label: ctx => {
+              const p = presidents[ctx.dataIndex];
+              return `IQ \u2248 ${p.iq}  (${p.party})`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: 110,
+          max: 180,
+          grid: { color: themeVar('--border-color') },
+          ticks: { font: { size: 11 }, color: themeVar('--fg-color') },
+          title: { display: true, text: 'Estimated IQ', font: { size: 12, weight: '500' }, color: themeVar('--fg-color') }
+        },
+        y: {
+          grid: { display: false },
+          ticks: {
+            font: { size: 11, weight: '500' },
+            color: themeVar('--fg-color'),
+            crossAlign: 'far'
           }
         }
       }
-    },
-    scales: {
-      x: {
-        min: 110,
-        max: 180,
-        grid: { color: 'rgba(255,255,255,0.06)' },
-        ticks: { font: { size: 11 } },
-        title: { display: true, text: 'Estimated IQ', font: { size: 12, weight: '500' } },
-      },
-      y: {
-        grid: { display: false },
-        ticks: {
-          font: { size: 11, weight: '500' },
-          color: '#c8cad0',
-          crossAlign: 'far',
-        },
-      }
     }
-  }
+  });
 });
 </script>
 </body>

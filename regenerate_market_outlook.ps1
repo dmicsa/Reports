@@ -175,7 +175,25 @@ Rewrite the provided HTML market outlook so it reflects the latest available mar
 
 Rules:
 - Return only a complete HTML document. No markdown fences, no explanation.
-- Preserve the overall visual design and structure unless a small edit materially improves clarity.
+- Preserve the team's standard report format exactly; do not redesign it:
+  * Head must contain: <meta charset="UTF-8">, <meta name="darkreader-lock">, the Theme.css link
+    https://dmicsa.github.io/HTMLAssets/Theme.css, the small inline style block (body uses var(--bg-color)/var(--fg-color),
+    .report-header flex), and the script https://dmicsa.github.io/HTMLAssets/Standard.js followed by the standard JS block
+    (togglePercent, updateNumberFormat, setSortArrow, sortState, sortTable, DOMContentLoaded init with initStandard(),
+    localStorage ms_percent handling, refreshMetaChips, updateTableColors).
+  * <body class="solarized-light"> with a .report-header containing the h1 and a .controls-group holding the palette
+    dropdown and the theme <select> with exactly these 17 options (in this order): solarized-light (selected), dark,
+    kiwi-dark, kiwi-light, light, mint-haze, mint-haze-dark, oil, petal-blush, petal-blush-dark, rose-linen,
+    rose-linen-dark, rust-brown, sage-sea, sage-sea-dark, warm-sand, warm-sand-dark. Labels are the title-cased names.
+  * All content sits in .card wrappers; data tables use class "grid-table" with thead th onclick="sortTable('<tableId>', n)",
+    numeric cells carrying data-field and data-val so columns sort, and custom col-label/col-txt/col-range/col-desc
+    column classes from the inline style for narrative columns.
+  * Keep the SVG sector bar chart, KPI metric cards, scenario/trigger cards, bullet panels, and the tooltip; all colors
+    must come from CSS variables (var(--bg-color), var(--fg-color), var(--table-bg), var(--border-color), var(--hover-bg),
+    var(--highlight-color)) or the data-driven hsla score scale - never hardcoded theme colors. Do not add Google Fonts.
+  * Footer: report name + version, (c) Dan Micsa, PhD (dmicsa@gmail.com), and "Generated on <date> at <time>".
+- Preserve the JS data arrays const sectorData, const regionData, const assetData, and const sourceData with the same
+  item shapes and the same sector/region/asset names (ticker scoring depends on them).
 - Keep the report tactical for a 1-month horizon.
 - Refresh the market data, scores, ranges, scenarios, tables, and explanatory text.
 - Keep and update the cross-asset section for Gold, Silver, US Dollar Index, US Treasuries, Petrol, DBA, and DBB.
