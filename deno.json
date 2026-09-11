@@ -1,7 +1,7 @@
 {
   "tasks": {
     "monthly-outlook": "deno run --allow-read --allow-write --allow-run monthly_outlook.ts",
-    "etf-screener": "deno run --allow-env --allow-net --allow-read --allow-write gen_etf_screener.ts"
+    "etf-screener": "deno run --allow-env --allow-net --allow-read --allow-write ETFScreener/gen_etf_screener.ts"
   },
   "fmt": {
     "semiColons": true,
